@@ -9,6 +9,19 @@
 ## <https://assets.tqtezos.com/docs/token-contracts/fa2/1-fa2-smartpy/>.
 ##
 import smartpy as sp
+
+
+def bytes_of_nat(params):
+    c   = sp.map({x : sp.bytes(hex(x + 48)) for x in range(0, 10)})
+    #c = sp.bytes('0x30313233343536373839')
+    x   = sp.local('x', params)
+    res = sp.local('res', [])
+    sp.if x.value == 0:
+        res.value.push(c[x.value % 10])
+    sp.while 0 < x.value:
+        res.value.push(c[x.value % 10])
+        x.value //= 10
+    return sp.concat(res.value)
 ##
 ## ## Meta-Programming Configuration
 ##
@@ -511,17 +524,17 @@ class FA2_mint(FA2_core):
         # TODO check for pauseness.
 
         sp.verify(sp.amount == sp.mutez(1000000), message = self.error_message.bad_value())
-        token_id = self.data.all_tokens
-        
+        token_id = sp.local('token_id', self.data.all_tokens).value
+
         token_hash = sp.keccak(sp.pack(sp.record(now=sp.now, s=sp.sender, tid=token_id)))
-        base_uri = "https://open-artblocks.herokuapp.com/api/"
+        base_uri = sp.utils.bytes_of_string("https://open-artblocks.herokuapp.com/api/")
 
         metadata = FA2.make_metadata(
             name = "Tezticule",
             decimals = 0,
             symbol= "TIK",
             token_hash = token_hash,
-            uri = base_uri + token_id
+            uri = base_uri + bytes_of_nat(token_id)
         )
 
         user = self.ledger_key.make(sp.sender, token_id)
@@ -558,7 +571,7 @@ class FA2_token_metadata(FA2_core):
             "name" : sp.utils.bytes_of_string(name),
             "symbol" : sp.utils.bytes_of_string(symbol),
             "token_hash" : token_hash,
-            "" : sp.utils.bytes_of_string(uri),
+            "" : uri,
         }))
 
 
@@ -730,8 +743,10 @@ def add_test(config, is_default = True):
             c1.data.ledger[c1.ledger_key.make(alice.address, 0)].balance == 1)
         scenario.verify(
             c1.data.ledger[c1.ledger_key.make(alice.address, 1)].balance == 1)
+        for _ in range(12):
+            c1.mint().run(sender = alice, amount = sp.mutez(1000000))
 
-        scenario.show(minted)
+        #scenario.show(minted)
         return
 #ICICICICICICICI
 #ICICICICICICICI
