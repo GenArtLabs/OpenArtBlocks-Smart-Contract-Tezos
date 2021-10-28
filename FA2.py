@@ -40,7 +40,8 @@ class FA2_config:
                  store_total_supply                 = True,
                  lazy_entry_points                  = False,
                  allow_self_transfer                = False,
-                 use_token_metadata_offchain_view   = True
+                 use_token_metadata_offchain_view   = True,
+                 price                              = 1000000
                  ):
 
         if debug_mode:
@@ -50,6 +51,8 @@ class FA2_config:
         # The option `debug_mode` makes the code generation use
         # regular maps instead of big-maps, hence it makes inspection
         # of the state of the contract easier.
+
+        self.price = price
 
         self.use_token_metadata_offchain_view = use_token_metadata_offchain_view
         # Include offchain view for accessing the token metadata (requires TZIP-016 contract metadata)
@@ -207,6 +210,20 @@ class Operator_param:
                       operator = operator,
                       token_id = token_id)
         return sp.set_type_expr(r, self.get_type())
+##
+## `Set_script_param` defines type types for the `%set_script` entry-point.
+class Set_script_param:
+    def __init__(self, config):
+        self.config = config
+    def get_type(self):
+        t = sp.TRecord(
+            collection = sp.TNat,
+            script = sp.TString)
+        return t
+    def make(self, collection, script):
+        r = sp.record(collection = collection,
+                      script = script)
+        return sp.set_type_expr(r, self.get_type())
 
 ## The class `Ledger_key` defines the key type for the main ledger (big-)map:
 ##
@@ -348,6 +365,7 @@ class FA2_core(sp.Contract):
         self.error_message = Error_message(self.config)
         self.operator_set = Operator_set(self.config)
         self.operator_param = Operator_param(self.config)
+        self.set_script_param = Set_script_param(self.config)
         self.token_id_set = Token_id_set(self.config)
         self.ledger_key = Ledger_key(self.config)
         self.token_meta_data = Token_meta_data(self.config)
@@ -364,6 +382,8 @@ class FA2_core(sp.Contract):
             operators = self.operator_set.make(),
             all_tokens = self.token_id_set.empty(),
             metadata = metadata,
+            price = self.config.price,
+            scripts = self.config.my_map(tkey = sp.TNat, tvalue = sp.TString),
             **extra_storage
         )
 
@@ -453,6 +473,12 @@ class FA2_core(sp.Contract):
         sp.verify(self.data.token_metadata.contains(req.token_id), message = self.error_message.token_undefined())
         sp.result(self.data.ledger[user].balance)
 
+
+    @sp.entry_point
+    def set_script(self, params):
+        sp.set_type(params, self.set_script_param.get_type())
+        # TODO fails for non-exitsant collection
+        self.data.scripts[params.collection] = params.script
 
     @sp.entry_point
     def update_operators(self, params):
@@ -745,6 +771,7 @@ def add_test(config, is_default = True):
             c1.data.ledger[c1.ledger_key.make(alice.address, 1)].balance == 1)
         for _ in range(12):
             c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        c1.set_script(sp.record(collection=0, script="coucou")).run(sender = alice)
 
         #scenario.show(minted)
         return
