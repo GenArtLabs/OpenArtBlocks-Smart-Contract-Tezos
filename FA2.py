@@ -225,33 +225,7 @@ class Set_script_param:
                       script = script)
         return sp.set_type_expr(r, self.get_type())
 
-## The class `Ledger_key` defines the key type for the main ledger (big-)map:
-##
-## - In *“Babylon mode”* we also have to call `sp.pack`.
-## - In *“single-asset mode”* we can just use the user's address.
-class Ledger_key:
-    def __init__(self, config):
-        self.config = config
-    def make(self, user, token):
-        user = sp.set_type_expr(user, sp.TAddress)
-        token = sp.set_type_expr(token, token_id_type)
-        if self.config.single_asset:
-            result = user
-        else:
-            result = sp.pair(user, token)
-        if self.config.readable:
-            return result
-        else:
-            return sp.pack(result)
 
-## For now a value in the ledger is just the user's balance. Previous
-## versions of the specification required more information; potential
-## extensions may require other fields.
-class Ledger_value:
-    def get_type():
-        return sp.TRecord(balance = sp.TNat)
-    def make(balance):
-        return sp.record(balance = balance)
 
 ## The link between operators and the addresses they operate is kept
 ## in a *lazy set* of `(owner × operator × token-id)` values.
@@ -367,7 +341,7 @@ class FA2_core(sp.Contract):
         self.operator_param = Operator_param(self.config)
         self.set_script_param = Set_script_param(self.config)
         self.token_id_set = Token_id_set(self.config)
-        self.ledger_key = Ledger_key(self.config)
+        # TODO understand self.ledger_key = Ledger_key(self.config)
         self.token_meta_data = Token_meta_data(self.config)
         self.batch_transfer    = Batch_transfer(self.config)
         if  self.config.add_mutez_transfer:
@@ -377,7 +351,7 @@ class FA2_core(sp.Contract):
         self.add_flag("initial-cast")
         self.exception_optimization_level = "default-line"
         self.init(
-            ledger = self.config.my_map(tvalue = Ledger_value.get_type()),
+            ledger = self.config.my_map(tkey = sp.TNat, tvalue = sp.TAddress),
             token_metadata = self.config.my_map(tkey = sp.TNat, tvalue = self.token_meta_data.get_type()),
             operators = self.operator_set.make(),
             all_tokens = self.token_id_set.empty(),
@@ -394,23 +368,13 @@ class FA2_core(sp.Contract):
 
     @sp.entry_point
     def transfer(self, params):
-        sp.verify( ~self.is_paused(), message = self.error_message.paused() )
         sp.set_type(params, self.batch_transfer.get_type())
         sp.for transfer in params:
-           current_from = transfer.from_
            sp.for tx in transfer.txs:
-                if self.config.single_asset:
-                    sp.verify(tx.token_id == 0, message = "single-asset: token-id <> 0")
 
-                sender_verify = ((self.is_administrator(sp.sender)) |
-                                (current_from == sp.sender))
+                sender_verify = (transfer.from_ == sp.sender)
                 message = self.error_message.not_owner()
-                if self.config.support_operator:
-                    message = self.error_message.not_operator()
-                    sender_verify |= (self.operator_set.is_member(self.data.operators,
-                                                                  current_from,
-                                                                  sp.sender,
-                                                                  tx.token_id))
+                
                 if self.config.allow_self_transfer:
                     sender_verify |= (sp.sender == sp.self_address)
                 sp.verify(sender_verify, message = message)
@@ -418,38 +382,27 @@ class FA2_core(sp.Contract):
                     self.data.token_metadata.contains(tx.token_id),
                     message = self.error_message.token_undefined()
                 )
-                # If amount is 0 we do nothing now:
-                sp.if (tx.amount > 0):
-                    from_user = self.ledger_key.make(current_from, tx.token_id)
+                sp.if (tx.amount == 1):
+                    
                     sp.verify(
-                        (self.data.ledger[from_user].balance >= tx.amount),
-                        message = self.error_message.insufficient_balance())
-                    to_user = self.ledger_key.make(tx.to_, tx.token_id)
-                    self.data.ledger[from_user].balance = sp.as_nat(
-                        self.data.ledger[from_user].balance - tx.amount)
-                    sp.if self.data.ledger.contains(to_user):
-                        self.data.ledger[to_user].balance += tx.amount
-                    sp.else:
-                         self.data.ledger[to_user] = Ledger_value.make(tx.amount)
+                        (self.data.ledger[tx.token_id] == sp.sender),
+                        message = self.error_message.insufficient_balance())                    
+                    self.data.ledger[tx.token_id] = tx.to_
                 sp.else:
                     pass
 
     @sp.entry_point
     def balance_of(self, params):
-        # paused may mean that balances are meaningless:
-        sp.verify( ~self.is_paused(), message = self.error_message.paused())
         sp.set_type(params, Balance_of.entry_point_type())
         def f_process_request(req):
-            user = self.ledger_key.make(req.owner, req.token_id)
             sp.verify(self.data.token_metadata.contains(req.token_id), message = self.error_message.token_undefined())
-            sp.if self.data.ledger.contains(user):
-                balance = self.data.ledger[user].balance
+            sp.if self.data.ledger[req.token_id] == req.owner:
                 sp.result(
                     sp.record(
                         request = sp.record(
                             owner = sp.set_type_expr(req.owner, sp.TAddress),
                             token_id = sp.set_type_expr(req.token_id, sp.TNat)),
-                        balance = balance))
+                        balance = 1))
             sp.else:
                 sp.result(
                     sp.record(
@@ -469,10 +422,11 @@ class FA2_core(sp.Contract):
                 owner = sp.TAddress,
                 token_id = sp.TNat
             ).layout(("owner", "token_id")))
-        user = self.ledger_key.make(req.owner, req.token_id)
         sp.verify(self.data.token_metadata.contains(req.token_id), message = self.error_message.token_undefined())
-        sp.result(self.data.ledger[user].balance)
-
+        sp.if self.data.ledger[req.token_id] == req.owner:
+            sp.result(1)
+        sp.else:
+            sp.result(0)
 
     @sp.entry_point
     def set_script(self, params):
@@ -563,17 +517,12 @@ class FA2_mint(FA2_core):
             uri = base_uri + bytes_of_nat(token_id)
         )
 
-        user = self.ledger_key.make(sp.sender, token_id)
-        sp.if self.data.ledger.contains(user):
-            self.data.ledger[user].balance += 1
-        sp.else:
-            self.data.ledger[user] = Ledger_value.make(1)
-        sp.if ~ self.token_id_set.contains(self.data.all_tokens, token_id):
-            self.token_id_set.add(self.data.all_tokens, token_id)
-            self.data.token_metadata[token_id] = sp.record(
-                token_id    = token_id,
-                token_info  = metadata
-            )
+        self.data.ledger[token_id] = sp.sender
+        self.token_id_set.add(self.data.all_tokens, token_id)
+        self.data.token_metadata[token_id] = sp.record(
+            token_id    = token_id,
+            token_info  = metadata
+        )
 
 class FA2_token_metadata(FA2_core):
     def set_token_metadata_view(self):
@@ -762,13 +711,11 @@ def add_test(config, is_default = True):
         minted = c1.mint().run(sender = alice, amount = sp.mutez(1000000))
         c1.mint().run(sender = alice, amount = sp.mutez(2), valid = False)
         scenario.verify(
-            c1.data.ledger[c1.ledger_key.make(alice.address, 0)].balance == 1)
+            c1.data.ledger[0] == alice.address)
         
         c1.mint().run(sender = alice, amount = sp.mutez(1000000))
-        scenario.verify(
-            c1.data.ledger[c1.ledger_key.make(alice.address, 0)].balance == 1)
-        scenario.verify(
-            c1.data.ledger[c1.ledger_key.make(alice.address, 1)].balance == 1)
+        scenario.verify(c1.data.ledger[0] == alice.address)
+        scenario.verify(c1.data.ledger[1] == alice.address)
         for _ in range(12):
             c1.mint().run(sender = alice, amount = sp.mutez(1000000))
         c1.set_script(sp.record(collection=0, script="coucou")).run(sender = alice)
