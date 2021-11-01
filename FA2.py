@@ -13,7 +13,6 @@ import smartpy as sp
 
 def bytes_of_nat(params):
     c   = sp.map({x : sp.bytes(hex(x + 48)) for x in range(0, 10)})
-    #c = sp.bytes('0x30313233343536373839')
     x   = sp.local('x', params)
     res = sp.local('res', [])
     sp.if x.value == 0:
@@ -32,7 +31,6 @@ class FA2_config:
                  debug_mode                         = False,
                  single_asset                       = False,
                  non_fungible                       = True,
-                 add_mutez_transfer                 = False,
                  readable                           = True,
                  force_layouts                      = True,
                  support_operator                   = True,
@@ -41,7 +39,8 @@ class FA2_config:
                  lazy_entry_points                  = False,
                  allow_self_transfer                = False,
                  use_token_metadata_offchain_view   = True,
-                 price                              = 1000000
+                 price                              = 1000000,
+                 max_editions                       = 2,
                  ):
 
         if debug_mode:
@@ -53,6 +52,7 @@ class FA2_config:
         # of the state of the contract easier.
 
         self.price = price
+        self.max_editions = max_editions
 
         self.use_token_metadata_offchain_view = use_token_metadata_offchain_view
         # Include offchain view for accessing the token metadata (requires TZIP-016 contract metadata)
@@ -98,7 +98,7 @@ class FA2_config:
         # Whether to store the total-supply for each token (next to
         # the token-metadata).
 
-        self.add_mutez_transfer = add_mutez_transfer
+        self.add_mutez_transfer = True
         # Add an entry point for the administrator to transfer tez potentially
         # in the contract's balance.
 
@@ -116,8 +116,6 @@ class FA2_config:
             name += "-single_asset"
         if non_fungible:
             name += "-nft"
-        if add_mutez_transfer:
-            name += "-mutez"
         if not readable:
             name += "-no_readable"
         if not force_layouts:
@@ -151,6 +149,7 @@ class Error_message:
     def not_operator(self):          return self.make("NOT_OPERATOR")
     def not_owner(self):             return self.make("NOT_OWNER")
     def bad_value(self):             return self.make("BAD_VALUE")
+    def max_editions_reached(self):  return self.make("MAX_EDITIONS_REACHED")
     def operators_unsupported(self): return self.make("OPERATORS_UNSUPPORTED")
     def not_admin(self):             return self.make("NOT_ADMIN")
     def not_admin_or_operator(self): return self.make("NOT_ADMIN_OR_OPERATOR")
@@ -503,9 +502,9 @@ class FA2_mint(FA2_core):
     def mint(self):
         # TODO check for pauseness.
 
-        sp.verify(sp.amount == sp.mutez(1000000), message = self.error_message.bad_value())
+        sp.verify(sp.amount == sp.mutez(self.config.price), message = self.error_message.bad_value())
         token_id = sp.local('token_id', self.data.all_tokens).value
-
+        sp.verify(token_id < self.config.max_editions, message = self.error_message.max_editions_reached())
         token_hash = sp.keccak(sp.pack(sp.record(now=sp.now, s=sp.sender, tid=token_id)))
         base_uri = sp.utils.bytes_of_string("https://open-artblocks.herokuapp.com/api/")
 
@@ -709,16 +708,25 @@ def add_test(config, is_default = True):
         scenario.h2("Mint")
 
         minted = c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        
+        scenario.h2("Fail because of bad price")
         c1.mint().run(sender = alice, amount = sp.mutez(2), valid = False)
         scenario.verify(
             c1.data.ledger[0] == alice.address)
         
+        scenario.h2("Test ledger")
         c1.mint().run(sender = alice, amount = sp.mutez(1000000))
         scenario.verify(c1.data.ledger[0] == alice.address)
         scenario.verify(c1.data.ledger[1] == alice.address)
-        for _ in range(12):
-            c1.mint().run(sender = alice, amount = sp.mutez(1000000))
-        c1.set_script(sp.record(collection=0, script="coucou")).run(sender = alice)
+
+        scenario.h2("Fail because of max tokens reached")
+
+        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
+
+        #for _ in range(12):
+        #    c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        #c1.set_script(sp.record(collection=0, script="coucou")).run(sender = alice)
+        
 
         #scenario.show(minted)
         return
@@ -1053,7 +1061,6 @@ def environment_config():
         debug_mode = global_parameter("debug_mode", False),
         single_asset = global_parameter("single_asset", False),
         non_fungible = global_parameter("non_fungible", False),
-        add_mutez_transfer = global_parameter("add_mutez_transfer", False),
         readable = global_parameter("readable", True),
         force_layouts = global_parameter("force_layouts", True),
         support_operator = global_parameter("support_operator", True),
@@ -1072,7 +1079,7 @@ def environment_config():
 if "templates" not in __name__:
     add_test(environment_config())
     if not global_parameter("only_environment_test", False):
-        add_test(FA2_config(non_fungible = True, add_mutez_transfer = True),
+        add_test(FA2_config(non_fungible = True),
                  is_default = not sp.in_browser)
 
     sp.add_compilation_target("FA2_comp", FA2(config = environment_config(),
