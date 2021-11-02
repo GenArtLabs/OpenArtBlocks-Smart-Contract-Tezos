@@ -466,7 +466,7 @@ class FA2_pause(FA2_core):
 class FA2_mint(FA2_core):
     @sp.entry_point
     def mint(self):
-        # TODO check for pauseness.
+        sp.verify(~ self.data.paused, message = self.error_message.paused())
 
         sp.verify(sp.amount == sp.mutez(self.config.price), message = self.error_message.bad_value())
         token_id = sp.local('token_id', self.data.all_tokens).value
@@ -673,6 +673,15 @@ def add_test(config, is_default = True):
         scenario.h2("Fail because of max tokens reached")
 
         c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
+
+        c1.set_pause(True).run(sender = admin)
+        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
+        scenario.h2("Fail because sale paused")
+
+        # TODO tests
+        # c1.set_pause(False).run(sender = admin)
+        # c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
+        # scenario.verify(c1.data.ledger[2] == alice.address)
 
         #for _ in range(12):
         #    c1.mint().run(sender = alice, amount = sp.mutez(1000000))
