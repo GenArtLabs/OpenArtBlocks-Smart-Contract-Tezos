@@ -491,12 +491,6 @@ class FA2_pause(FA2_core):
         sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
         self.data.paused = params
 
-class FA2_change_metadata(FA2_core):
-    @sp.entry_point
-    def set_metadata(self, k, v):
-        sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
-        self.data.metadata[k] = v
-
 class FA2_mint(FA2_core):
     @sp.entry_point
     def mint(self):
@@ -549,7 +543,7 @@ class FA2_token_metadata(FA2_core):
         }))
 
 
-class FA2(FA2_change_metadata, FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_core):
+class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_core):
 
     @sp.offchain_view(pure = True)
     def count_tokens(self):
