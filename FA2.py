@@ -327,6 +327,7 @@ class FA2_core(sp.Contract):
             all_tokens = self.token_id_set.empty(),
             metadata = metadata,
             price = self.config.price,
+            max_editions = self.config.max_editions,
             scripts = self.config.my_map(tkey = sp.TNat, tvalue = sp.TString),
             **extra_storage
         )
