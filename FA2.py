@@ -38,6 +38,7 @@ class FA2_config:
                  use_token_metadata_offchain_view   = True,
                  price                              = 1000000,
                  max_editions                       = 2,
+                 base_uri                       = "https://open-artblocks.herokuapp.com/api/",
                  ):
 
         if debug_mode:
@@ -50,6 +51,7 @@ class FA2_config:
 
         self.price = price
         self.max_editions = max_editions
+        self.base_uri = base_uri
 
         self.use_token_metadata_offchain_view = use_token_metadata_offchain_view
         # Include offchain view for accessing the token metadata (requires TZIP-016 contract metadata)
@@ -329,6 +331,7 @@ class FA2_core(sp.Contract):
             price = self.config.price,
             max_editions = self.config.max_editions,
             scripts = self.config.my_map(tkey = sp.TNat, tvalue = sp.TString),
+            base_uri = sp.utils.bytes_of_string(self.config.base_uri),
             **extra_storage
         )
 
@@ -401,9 +404,16 @@ class FA2_core(sp.Contract):
 
     @sp.entry_point
     def set_script(self, params):
+        sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
         sp.set_type(params, self.set_script_param.get_type())
         # TODO fails for non-exitsant collection
         self.data.scripts[params.collection] = params.script
+
+    @sp.entry_point
+    def set_base_uri(self, params):
+        sp.set_type(params, sp.TBytes)
+        sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
+        self.data.base_uri = params
 
     @sp.entry_point
     def update_operators(self, params):
@@ -472,14 +482,13 @@ class FA2_mint(FA2_core):
         token_id = sp.local('token_id', self.data.all_tokens).value
         sp.verify(token_id < self.config.max_editions, message = self.error_message.max_editions_reached())
         token_hash = sp.keccak(sp.pack(sp.record(now=sp.now, s=sp.sender, tid=token_id)))
-        base_uri = sp.utils.bytes_of_string("https://open-artblocks.herokuapp.com/api/")
 
         metadata = FA2.make_metadata(
             name = "Tezticule",
             decimals = 0,
             symbol= "TIK",
             token_hash = token_hash,
-            uri = base_uri + bytes_of_nat(token_id)
+            uri = self.data.base_uri + bytes_of_nat(token_id)
         )
 
         self.data.ledger[token_id] = sp.sender
@@ -658,12 +667,17 @@ def add_test(config, is_default = True):
 
         scenario.h2("Mint")
 
+        stringUrl = 'https://yo.com/api/'
+        url = sp.bytes('0x' + ''.join([hex(ord(c))[2:] for c in stringUrl]))
+        c1.set_base_uri(url).run(sender = admin)
         minted = c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        scenario.verify(c1.data.ledger[0] == alice.address)
 
         scenario.h2("Fail because of bad price")
         c1.mint().run(sender = alice, amount = sp.mutez(2), valid = False)
-        scenario.verify(
-            c1.data.ledger[0] == alice.address)
+
+        resultingUri = c1.data.token_metadata[0].token_info['']
+        scenario.verify(resultingUri == sp.bytes('0x' + ''.join([hex(ord(c))[2:] for c in stringUrl + '0'])))
 
         scenario.h2("Test ledger")
         c1.mint().run(sender = alice, amount = sp.mutez(1000000))
