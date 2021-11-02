@@ -129,6 +129,7 @@ class Error_message:
     def not_admin(self):             return self.make("NOT_ADMIN")
     def not_admin_or_operator(self): return self.make("NOT_ADMIN_OR_OPERATOR")
     def paused(self):                return self.make("PAUSED")
+    def locked(self):                return self.make("LOCKED")
 
 ## The current type for a batched transfer in the specification is as
 ## follows:
@@ -403,19 +404,6 @@ class FA2_core(sp.Contract):
             sp.result(0)
 
     @sp.entry_point
-    def set_script(self, params):
-        sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
-        sp.set_type(params, self.set_script_param.get_type())
-        # TODO fails for non-exitsant collection
-        self.data.scripts[params.collection] = params.script
-
-    @sp.entry_point
-    def set_base_uri(self, params):
-        sp.set_type(params, sp.TBytes)
-        sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
-        self.data.base_uri = params
-
-    @sp.entry_point
     def update_operators(self, params):
         sp.set_type(params, sp.TList(
             sp.TVariant(
@@ -473,10 +461,19 @@ class FA2_pause(FA2_core):
         sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
         self.data.paused = params
 
+class FA2_lock(FA2_core):
+    def is_locked(self):
+        return self.data.locked
+
+    @sp.entry_point
+    def lock(self):
+        sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
+        self.data.locked = sp.bool(True)
+
 class FA2_mint(FA2_core):
     @sp.entry_point
     def mint(self):
-        sp.verify(~ self.data.paused, message = self.error_message.paused())
+        sp.verify(~ self.is_paused(), message = self.error_message.paused())
 
         sp.verify(sp.amount == sp.mutez(self.config.price), message = self.error_message.bad_value())
         token_id = sp.local('token_id', self.data.all_tokens).value
@@ -497,6 +494,23 @@ class FA2_mint(FA2_core):
             token_id    = token_id,
             token_info  = metadata
         )
+
+class FA2_script(FA2_core):
+    @sp.entry_point
+    def set_script(self, params):
+        sp.verify(~ self.is_locked(), message = self.error_message.locked())
+        sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
+        sp.set_type(params, self.set_script_param.get_type())
+        # TODO fails for non-exitsant collection
+        self.data.scripts[params.collection] = params.script
+
+class FA2_base_uri(FA2_core):
+    @sp.entry_point
+    def set_base_uri(self, params):
+        sp.set_type(params, sp.TBytes)
+        sp.verify(~ self.is_locked(), message = self.error_message.locked())
+        sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
+        self.data.base_uri = params
 
 class FA2_token_metadata(FA2_core):
     def set_token_metadata_view(self):
@@ -524,7 +538,7 @@ class FA2_token_metadata(FA2_core):
         }))
 
 
-class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_core):
+class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_lock, FA2_script, FA2_base_uri, FA2_core):
 
     @sp.offchain_view(pure = True)
     def count_tokens(self):
@@ -613,7 +627,7 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_core):
             }
         }
         self.init_metadata("metadata_base", metadata_base)
-        FA2_core.__init__(self, config, metadata, paused = False, administrator = admin)
+        FA2_core.__init__(self, config, metadata, paused = False, locked = False, administrator = admin)
 
 ## ## Tests
 ##
@@ -680,17 +694,21 @@ def add_test(config, is_default = True):
         scenario.verify(resultingUri == sp.bytes('0x' + ''.join([hex(ord(c))[2:] for c in stringUrl + '0'])))
 
         scenario.h2("Test ledger")
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000))
-        scenario.verify(c1.data.ledger[0] == alice.address)
-        scenario.verify(c1.data.ledger[1] == alice.address)
+        # c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        # scenario.verify(c1.data.ledger[0] == alice.address)
+        # scenario.verify(c1.data.ledger[1] == alice.address)
 
-        scenario.h2("Fail because of max tokens reached")
+        # scenario.h2("Fail because of max tokens reached")
 
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
+        # c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
 
         c1.set_pause(True).run(sender = admin)
         c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
         scenario.h2("Fail because sale paused")
+
+        c1.lock().run(sender = admin)
+        c1.set_base_uri(url).run(sender = admin, valid=False)
+        scenario.h2("Fail because contract is locked")
 
         # TODO tests
         # c1.set_pause(False).run(sender = admin)
