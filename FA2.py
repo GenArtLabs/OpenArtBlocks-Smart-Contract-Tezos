@@ -325,7 +325,7 @@ class FA2_core(sp.Contract):
         self.exception_optimization_level = "default-line"
         self.init(
             ledger = self.config.my_map(tkey = sp.TNat, tvalue = sp.TAddress),
-            token_metadata = self.config.my_map(tkey = sp.TNat, tvalue = self.token_meta_data.get_type()),
+            hashes = self.config.my_map(tkey = sp.TNat, tvalue = sp.TBytes),
             operators = self.operator_set.make(),
             all_tokens = self.token_id_set.empty(),
             metadata = metadata,
@@ -354,7 +354,7 @@ class FA2_core(sp.Contract):
                     sender_verify |= (sp.sender == sp.self_address)
                 sp.verify(sender_verify, message = message)
                 sp.verify(
-                    self.data.token_metadata.contains(tx.token_id),
+                    self.data.hashes.contains(tx.token_id),
                     message = self.error_message.token_undefined()
                 )
                 sp.if (tx.amount == 1):
@@ -370,7 +370,7 @@ class FA2_core(sp.Contract):
     def balance_of(self, params):
         sp.set_type(params, Balance_of.entry_point_type())
         def f_process_request(req):
-            sp.verify(self.data.token_metadata.contains(req.token_id), message = self.error_message.token_undefined())
+            sp.verify(self.data.hashes.contains(req.token_id), message = self.error_message.token_undefined())
             sp.if self.data.ledger[req.token_id] == req.owner:
                 sp.result(
                     sp.record(
@@ -397,7 +397,7 @@ class FA2_core(sp.Contract):
                 owner = sp.TAddress,
                 token_id = sp.TNat
             ).layout(("owner", "token_id")))
-        sp.verify(self.data.token_metadata.contains(req.token_id), message = self.error_message.token_undefined())
+        sp.verify(self.data.hashes.contains(req.token_id), message = self.error_message.token_undefined())
         sp.if self.data.ledger[req.token_id] == req.owner:
             sp.result(1)
         sp.else:
@@ -474,26 +474,17 @@ class FA2_mint(FA2_core):
     @sp.entry_point
     def mint(self):
         sp.verify(~ self.is_paused(), message = self.error_message.paused())
-
         sp.verify(sp.amount == sp.mutez(self.config.price), message = self.error_message.bad_value())
+
         token_id = sp.local('token_id', self.data.all_tokens).value
         sp.verify(token_id < self.config.max_editions, message = self.error_message.max_editions_reached())
+
         token_hash = sp.keccak(sp.pack(sp.record(now=sp.now, s=sp.sender, tid=token_id)))
 
-        metadata = FA2.make_metadata(
-            name = "Tezticule",
-            decimals = 0,
-            symbol= "TIK",
-            token_hash = token_hash,
-            uri = self.data.base_uri + bytes_of_nat(token_id)
-        )
-
         self.data.ledger[token_id] = sp.sender
+        self.data.hashes[token_id] = token_hash
         self.token_id_set.add(self.data.all_tokens, token_id)
-        self.data.token_metadata[token_id] = sp.record(
-            token_id    = token_id,
-            token_info  = metadata
-        )
+
 
 class FA2_script(FA2_core):
     @sp.entry_point
@@ -514,15 +505,27 @@ class FA2_base_uri(FA2_core):
 
 class FA2_token_metadata(FA2_core):
     def set_token_metadata_view(self):
-        def token_metadata(self, tok):
+        def token_metadata(self, token_id):
             """
             Return the token-metadata URI for the given token.
 
             For a reference implementation, dynamic-views seem to be the
             most flexible choice.
             """
-            sp.set_type(tok, sp.TNat)
-            sp.result(self.data.token_metadata[tok])
+            sp.set_type(token_id, sp.TNat)
+
+            sp.verify(token_id < self.data.all_tokens, message = self.error_message.token_undefined())
+            token_hash = self.data.hashes[token_id]
+
+            metadata = FA2.make_metadata(
+                name = "Tezticule",
+                decimals = 0,
+                symbol= "TIK",
+                token_hash = token_hash,
+                uri = self.data.base_uri + bytes_of_nat(token_id)
+            )
+
+            sp.result(sp.record(token_id  = token_id, token_info = metadata))
 
         self.token_metadata = sp.offchain_view(pure = True, doc = "Get Token Metadata")(token_metadata)
 
@@ -550,7 +553,7 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_lock, 
     def does_token_exist(self, tok):
         "Ask whether a token ID is exists."
         sp.set_type(tok, sp.TNat)
-        sp.result(self.data.token_metadata.contains(tok))
+        sp.result(self.data.hashes.contains(tok))
 
     @sp.offchain_view(pure = True)
     def all_tokens(self):
@@ -690,7 +693,7 @@ def add_test(config, is_default = True):
         scenario.h2("Fail because of bad price")
         c1.mint().run(sender = alice, amount = sp.mutez(2), valid = False)
 
-        resultingUri = c1.data.token_metadata[0].token_info['']
+        resultingUri = c1.token_metadata(0).token_info['']
         scenario.verify(resultingUri == sp.bytes('0x' + ''.join([hex(ord(c))[2:] for c in stringUrl + '0'])))
 
         scenario.h2("Test ledger")
