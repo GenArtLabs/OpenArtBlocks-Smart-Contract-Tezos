@@ -306,7 +306,7 @@ class Token_id_set:
         return (tokenID < totalTokens)
     def cardinal(self, totalTokens):
         return totalTokens
-        
+
 ##
 ## ## Implementation of the Contract
 ##
@@ -373,7 +373,7 @@ class FA2_core(sp.Contract):
 
                 sender_verify = (transfer.from_ == sp.sender)
                 message = self.error_message.not_owner()
-                
+
                 if self.config.allow_self_transfer:
                     sender_verify |= (sp.sender == sp.self_address)
                 sp.verify(sender_verify, message = message)
@@ -382,10 +382,10 @@ class FA2_core(sp.Contract):
                     message = self.error_message.token_undefined()
                 )
                 sp.if (tx.amount == 1):
-                    
+
                     sp.verify(
                         (self.data.ledger[tx.token_id] == sp.sender),
-                        message = self.error_message.insufficient_balance())                    
+                        message = self.error_message.insufficient_balance())
                     self.data.ledger[tx.token_id] = tx.to_
                 sp.else:
                     pass
@@ -702,12 +702,12 @@ def add_test(config, is_default = True):
         scenario.h2("Mint")
 
         minted = c1.mint().run(sender = alice, amount = sp.mutez(1000000))
-        
+
         scenario.h2("Fail because of bad price")
         c1.mint().run(sender = alice, amount = sp.mutez(2), valid = False)
         scenario.verify(
             c1.data.ledger[0] == alice.address)
-        
+
         scenario.h2("Test ledger")
         c1.mint().run(sender = alice, amount = sp.mutez(1000000))
         scenario.verify(c1.data.ledger[0] == alice.address)
@@ -720,7 +720,7 @@ def add_test(config, is_default = True):
         #for _ in range(12):
         #    c1.mint().run(sender = alice, amount = sp.mutez(1000000))
         #c1.set_script(sp.record(collection=0, script="coucou")).run(sender = alice)
-        
+
 
         #scenario.show(minted)
         return
