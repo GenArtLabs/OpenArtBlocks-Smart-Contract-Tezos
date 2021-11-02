@@ -29,14 +29,11 @@ def bytes_of_nat(params):
 class FA2_config:
     def __init__(self,
                  debug_mode                         = False,
-                 single_asset                       = False,
                  non_fungible                       = True,
                  readable                           = True,
                  force_layouts                      = True,
                  support_operator                   = True,
-                 assume_consecutive_token_ids       = True,
                  store_total_supply                 = True,
-                 lazy_entry_points                  = False,
                  allow_self_transfer                = False,
                  use_token_metadata_offchain_view   = True,
                  price                              = 1000000,
@@ -56,10 +53,6 @@ class FA2_config:
 
         self.use_token_metadata_offchain_view = use_token_metadata_offchain_view
         # Include offchain view for accessing the token metadata (requires TZIP-016 contract metadata)
-
-        self.single_asset = single_asset
-        # This makes the contract save some gas and storage by
-        # working only for the token-id `0`.
 
         self.non_fungible = non_fungible
         # Enforce the non-fungibility of the tokens, i.e. the fact
@@ -85,15 +78,6 @@ class FA2_config:
         # definitely a use-case for having them completely empty (saving
         # storage and gas when `support_operator` is `False).
 
-        self.assume_consecutive_token_ids = assume_consecutive_token_ids
-        # For a previous version of the TZIP specification, it was
-        # necessary to keep track of the set of all tokens in the contract.
-        #
-        # The set of tokens is for now still available; this parameter
-        # guides how to implement it:
-        # If `true` we don't need a real set of token ids, just to know how
-        # many there are.
-
         self.store_total_supply = store_total_supply
         # Whether to store the total-supply for each token (next to
         # the token-metadata).
@@ -102,18 +86,11 @@ class FA2_config:
         # Add an entry point for the administrator to transfer tez potentially
         # in the contract's balance.
 
-        self.lazy_entry_points = lazy_entry_points
-        #
-        # Those are “compilation” options of SmartPy into Michelson.
-        #
-
         self.allow_self_transfer = allow_self_transfer
         # Authorize call of `transfer` entry_point from self
         name = "FA2"
         if debug_mode:
             name += "-debug"
-        if single_asset:
-            name += "-single_asset"
         if non_fungible:
             name += "-nft"
         if not readable:
@@ -122,12 +99,8 @@ class FA2_config:
             name += "-no_layout"
         if not support_operator:
             name += "-no_ops"
-        if not assume_consecutive_token_ids:
-            name += "-no_toknat"
         if not store_total_supply:
             name += "-no_totsup"
-        if lazy_entry_points:
-            name += "-lep"
         if allow_self_transfer:
             name += "-self_transfer"
         self.name = name
@@ -345,8 +318,6 @@ class FA2_core(sp.Contract):
         self.batch_transfer    = Batch_transfer(self.config)
         if  self.config.add_mutez_transfer:
             self.transfer_mutez = sp.entry_point(mutez_transfer)
-        if config.lazy_entry_points:
-            self.add_flag("lazy-entry-points")
         self.add_flag("initial-cast")
         self.exception_optimization_level = "default-line"
         self.init(
@@ -559,10 +530,7 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_core):
 
     @sp.offchain_view(pure = True)
     def all_tokens(self):
-        if self.config.assume_consecutive_token_ids:
-            sp.result(sp.range(0, self.data.all_tokens))
-        else:
-            sp.result(self.data.all_tokens.elements())
+        sp.result(sp.range(0, self.data.all_tokens))
 
     @sp.offchain_view(pure = True)
     def total_supply(self, tok):
@@ -588,21 +556,9 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_core):
 
     def __init__(self, config, metadata, admin):
         # Let's show off some meta-programming:
-        if config.assume_consecutive_token_ids:
-            self.all_tokens.doc = """
-            This view is specified (but optional) in the standard.
-
-            This contract is built with assume_consecutive_token_ids =
-            True, so we return a list constructed from the number of tokens.
-            """
-        else:
-            self.all_tokens.doc = """
-            This view is specified (but optional) in the standard.
-
-            This contract is built with assume_consecutive_token_ids =
-            False, so we convert the set of tokens from the storage to a list
-            to fit the expected type of TZIP-16.
-            """
+        self.all_tokens.doc = """
+        This view is specified (but optional) in the standard.
+        """
         list_of_views = [
             self.get_balance
             , self.does_token_exist
@@ -781,8 +737,6 @@ def add_test(config, is_default = True):
         scenario.verify(
             c1.data.ledger[c1.ledger_key.make(bob.address, 0)].balance
             == 10 + 10 + 11)
-        if config.single_asset:
-            return
         scenario.h2("More Token Types")
         tok1_md = FA2.make_metadata(
             name = "The Second Token",
@@ -1053,15 +1007,11 @@ def global_parameter(env_var, default):
 def environment_config():
     return FA2_config(
         debug_mode = global_parameter("debug_mode", False),
-        single_asset = global_parameter("single_asset", False),
         non_fungible = global_parameter("non_fungible", False),
         readable = global_parameter("readable", True),
         force_layouts = global_parameter("force_layouts", True),
         support_operator = global_parameter("support_operator", True),
-        assume_consecutive_token_ids =
-            global_parameter("assume_consecutive_token_ids", True),
         store_total_supply = global_parameter("store_total_supply", False),
-        lazy_entry_points = global_parameter("lazy_entry_points", False),
         allow_self_transfer = global_parameter("allow_self_transfer", False),
         use_token_metadata_offchain_view = global_parameter("use_token_metadata_offchain_view", True),
     )
