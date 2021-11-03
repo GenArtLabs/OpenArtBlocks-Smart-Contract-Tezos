@@ -126,6 +126,7 @@ class Error_message:
     def not_admin_or_operator(self): return self.make("NOT_ADMIN_OR_OPERATOR")
     def paused(self):                return self.make("PAUSED")
     def locked(self):                return self.make("LOCKED")
+    def bad_amount(self):           return self.make("BAD_QUANTITY")
 
 ## The current type for a batched transfer in the specification is as
 ## follows:
@@ -453,12 +454,13 @@ class FA2_mint(FA2_core):
     @sp.entry_point
     def mint(self, amount):
         sp.set_type(amount, sp.TInt)
-        sp.verify(amount > 0, message = self.error_message.bad_value())
+        sp.verify(amount > 0, message = self.error_message.bad_amount())
 
         sp.verify(~ self.is_paused(), message = self.error_message.paused())
 
-        sp.verify(sp.amount == sp.mutez(self.config.price), message = self.error_message.bad_value())
-        sp.verify(self.data.all_tokens + sp.as_nat(amount, message = self.error_message.bad_value()) <= self.config.max_editions, message = self.error_message.max_editions_reached())
+        nat_amount = sp.as_nat(amount, message = self.error_message.bad_amount())
+        sp.verify(sp.amount == sp.mul(sp.mutez(self.config.price), nat_amount), message = self.error_message.bad_value())
+        sp.verify(self.data.all_tokens + nat_amount <= self.config.max_editions, message = self.error_message.max_editions_reached())
 
         i = sp.compute(amount)
         sp.while i > 0:
@@ -1115,10 +1117,10 @@ def add_test(config, is_default = True):
         scenario += c2
 
         scenario.p("Alice mints 3 tokens")
-        c2.mint(3).run(sender = alice, amount = sp.mutez(1000000))
+        c2.mint(3).run(sender = alice, amount = sp.mutez(3000000))
 
         scenario.p("Bob mints 2 tokens")
-        c2.mint(2).run(sender = bob, amount = sp.mutez(1000000))
+        c2.mint(2).run(sender = bob, amount = sp.mutez(2000000))
 
         scenario.p("Admin mints 1 token")
         c2.mint(1).run(sender = admin, amount = sp.mutez(1000000))
