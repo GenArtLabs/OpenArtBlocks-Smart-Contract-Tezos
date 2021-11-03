@@ -698,6 +698,14 @@ def add_test(config, is_default = True):
         scenario.h2("Fail because of bad price")
         c1.mint().run(sender = alice, amount = sp.mutez(2), valid = False)
 
+        scenario.h2("Test ledger")
+        c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        scenario.verify(c1.data.ledger[0] == alice.address)
+        scenario.verify(c1.data.ledger[1] == alice.address)
+
+        scenario.h2("Mint when max number of token reached")
+        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
+
     @sp.add_test(name = "Tests pause", is_default = is_default)
     def tests_pause():
         scenario = sp.test_scenario()
@@ -786,35 +794,6 @@ def add_test(config, is_default = True):
 
     @sp.add_test(name = config.name, is_default = is_default)
     def test():
-        return
-        scenario.h2("Test ledger")
-        # c1.mint().run(sender = alice, amount = sp.mutez(1000000))
-        # scenario.verify(c1.data.ledger[0] == alice.address)
-        # scenario.verify(c1.data.ledger[1] == alice.address)
-
-        # scenario.h2("Fail because of max tokens reached")
-
-        # c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
-
-        c1.set_pause(True).run(sender = admin)
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
-        scenario.h2("Fail because sale paused")
-
-        c1.lock().run(sender = admin)
-        c1.set_base_uri(url).run(sender = admin, valid=False)
-        scenario.h2("Fail because contract is locked")
-
-        # TODO tests
-        # c1.set_pause(False).run(sender = admin)
-        # c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
-        # scenario.verify(c1.data.ledger[2] == alice.address)
-
-        #for _ in range(12):
-        #    c1.mint().run(sender = alice, amount = sp.mutez(1000000))
-        #c1.set_script(sp.record(collection=0, script="coucou")).run(sender = alice)
-
-
-        #scenario.show(minted)
         return
 #ICICICICICICICI
 #ICICICICICICICI
