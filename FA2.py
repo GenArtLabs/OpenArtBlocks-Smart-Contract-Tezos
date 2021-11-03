@@ -814,9 +814,17 @@ def add_test(config, is_default = True):
         scenario.p("Bob mints a token")
         c1.mint().run(sender = bob, amount = sp.mutez(1000000))
 
-        scenario.p("Check initial ownership")
-        scenario.verify(c1.data.ledger[0] == alice.address)
-        scenario.verify(c1.data.ledger[1] == bob.address)
+        scenario.p("Admin mints a token")
+        c1.mint().run(sender = admin, amount = sp.mutez(1000000))
+
+        def ownership_test(ledgers=None):
+            if ledgers is None:
+                ledgers = ["Alice", "Robert", "Administrator"]
+                ledgers = list(map(lambda l: sp.test_account(l), ledgers))
+            scenario.p("Check initial ownership")
+            for i in range(3):
+                scenario.verify(c1.data.ledger[i] == ledgers[i].address)
+        ownership_test()
 
         scenario.h2("Simple transfer")
         scenario.h3("Alice sends its token to Bob")
@@ -829,9 +837,7 @@ def add_test(config, is_default = True):
                                     ])
             ]).run(sender = alice)
 
-        scenario.p("Ownership test")
-        scenario.verify(c1.data.ledger[0] == bob.address)
-        scenario.verify(c1.data.ledger[1] == bob.address)
+        ownership_test([bob, bob, admin])
 
         scenario.h3("Bob sends its initial token to Bob")
         c1.transfer([
@@ -843,9 +849,7 @@ def add_test(config, is_default = True):
                                     ])
             ]).run(sender = bob)
 
-        scenario.p("Ownership test")
-        scenario.verify(c1.data.ledger[0] == bob.address)
-        scenario.verify(c1.data.ledger[1] == alice.address)
+        ownership_test([bob, alice, admin])
 
         scenario.h3("Alice sends a token to itself")
         c1.transfer([
@@ -857,9 +861,7 @@ def add_test(config, is_default = True):
                                     ])
             ]).run(sender = alice)
 
-        scenario.p("Ownership test")
-        scenario.verify(c1.data.ledger[0] == bob.address)
-        scenario.verify(c1.data.ledger[1] == alice.address)
+        ownership_test([bob, alice, admin])
 
         scenario.h2("Invalid simple transfers")
 
@@ -873,9 +875,7 @@ def add_test(config, is_default = True):
                                     ])
             ]).run(sender = alice, valid=False)
 
-        scenario.p("Ownership test")
-        scenario.verify(c1.data.ledger[0] == bob.address)
-        scenario.verify(c1.data.ledger[1] == alice.address)
+        ownership_test([bob, alice, admin])
 
         scenario.h3("Alice tries to steal a token from Bob")
         c1.transfer([
@@ -887,9 +887,7 @@ def add_test(config, is_default = True):
                                     ])
             ]).run(sender = alice, valid=False)
 
-        scenario.p("Ownership test")
-        scenario.verify(c1.data.ledger[0] == bob.address)
-        scenario.verify(c1.data.ledger[1] == alice.address)
+        ownership_test([bob, alice, admin])
 
         scenario.h3("Alice tries to transfer a non-existing token")
         c1.transfer([
@@ -901,9 +899,7 @@ def add_test(config, is_default = True):
                                     ])
             ]).run(sender = alice, valid=False)
 
-        scenario.p("Ownership test")
-        scenario.verify(c1.data.ledger[0] == bob.address)
-        scenario.verify(c1.data.ledger[1] == alice.address)
+        ownership_test([bob, alice, admin])
 
         scenario.h3("Alice tries to self-transfer a non-existing token")
         c1.transfer([
@@ -915,9 +911,7 @@ def add_test(config, is_default = True):
                                     ])
             ]).run(sender = alice, valid=False)
 
-        scenario.p("Ownership test")
-        scenario.verify(c1.data.ledger[0] == bob.address)
-        scenario.verify(c1.data.ledger[1] == alice.address)
+        ownership_test([bob, alice, admin])
 
         scenario.h3("Alice tries to steal a non-existing token from Bob")
         c1.transfer([
@@ -929,9 +923,21 @@ def add_test(config, is_default = True):
                                     ])
             ]).run(sender = alice, valid=False)
 
-        scenario.p("Ownership test")
-        scenario.verify(c1.data.ledger[0] == bob.address)
-        scenario.verify(c1.data.ledger[1] == alice.address)
+        ownership_test([bob, alice, admin])
+
+        scenario.h2("Test admin special rights")
+
+        scenario.h3("Admin tries to steal a token from Alice")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = admin.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = admin, valid=False)
+
+        ownership_test([bob, alice, admin])
 
         return
 
