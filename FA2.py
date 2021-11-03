@@ -337,6 +337,8 @@ class FA2_core(sp.Contract):
                     self.data.hashes.contains(tx.token_id),
                     message = self.error_message.token_undefined()
                 )
+                sp.verify(tx.amount <= 1, message = self.error_message.insufficient_balance())
+
                 sp.if (tx.amount == 1):
 
                     sp.verify(
