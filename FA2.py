@@ -1065,7 +1065,40 @@ def add_test(config, is_default = True):
             ]).run(sender = alice)
         ownership_test(c1, [bob, alice, admin])
 
+        scenario.h4("Alice sends its token in 0 ammount to someone")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 0,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = alice)
+        ownership_test(c1, [bob, alice, admin])
+
+        scenario.h4("Alice sends a Bob's token in 0 ammount to someone")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 0,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = alice)
+        ownership_test(c1, [bob, alice, admin])
+
         scenario.h3("Invalid testcases")
+
+        scenario.h4("Alice tries to send a non-existing token in 0 ammount to someone")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 0,
+                                                token_id = 1000)
+                                    ])
+            ]).run(sender = alice, valid=False)
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h4("Alice tries to send twice its token (ammount) to someone")
         c1.transfer([
