@@ -838,7 +838,6 @@ def add_test(config, is_default = True):
                                                 token_id = 0)
                                     ])
             ]).run(sender = alice)
-
         ownership_test([bob, bob, admin])
 
         scenario.h3("Bob sends its initial token to Bob")
@@ -850,7 +849,6 @@ def add_test(config, is_default = True):
                                                 token_id = 1)
                                     ])
             ]).run(sender = bob)
-
         ownership_test([bob, alice, admin])
 
         scenario.h3("Alice sends a token to itself")
@@ -862,7 +860,6 @@ def add_test(config, is_default = True):
                                                 token_id = 1)
                                     ])
             ]).run(sender = alice)
-
         ownership_test([bob, alice, admin])
 
         scenario.h2("Invalid simple transfers")
@@ -876,7 +873,6 @@ def add_test(config, is_default = True):
                                                 token_id = 0)
                                     ])
             ]).run(sender = alice, valid=False)
-
         ownership_test([bob, alice, admin])
 
         scenario.h3("Alice tries to steal a token from Bob")
@@ -888,7 +884,6 @@ def add_test(config, is_default = True):
                                                 token_id = 0)
                                     ])
             ]).run(sender = alice, valid=False)
-
         ownership_test([bob, alice, admin])
 
         scenario.h3("Alice tries to transfer a non-existing token")
@@ -900,7 +895,6 @@ def add_test(config, is_default = True):
                                                 token_id = 2)
                                     ])
             ]).run(sender = alice, valid=False)
-
         ownership_test([bob, alice, admin])
 
         scenario.h3("Alice tries to self-transfer a non-existing token")
@@ -912,7 +906,6 @@ def add_test(config, is_default = True):
                                                 token_id = 2)
                                     ])
             ]).run(sender = alice, valid=False)
-
         ownership_test([bob, alice, admin])
 
         scenario.h3("Alice tries to steal a non-existing token from Bob")
@@ -924,10 +917,9 @@ def add_test(config, is_default = True):
                                                 token_id = 2)
                                     ])
             ]).run(sender = alice, valid=False)
-
         ownership_test([bob, alice, admin])
 
-        scenario.h2("Test admin special rights")
+        scenario.h2("Test existencee of admin special rights")
 
         scenario.h3("Admin tries to steal a token from Alice")
         c1.transfer([
@@ -938,7 +930,6 @@ def add_test(config, is_default = True):
                                                 token_id = 2)
                                     ])
             ]).run(sender = admin, valid=False)
-
         ownership_test([bob, alice, admin])
 
         return
