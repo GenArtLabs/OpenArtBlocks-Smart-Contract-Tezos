@@ -817,12 +817,14 @@ def add_test(config, is_default = True):
         scenario.p("Admin mints a token")
         c1.mint().run(sender = admin, amount = sp.mutez(1000000))
 
-        def ownership_test(ledgers=None):
+        def ownership_test(ledgers=None, quiet=False):
+            if not quiet:
+                scenario.p("Tokens ownership test")
             if ledgers is None:
                 ledgers = ["Alice", "Robert", "Administrator"]
                 ledgers = list(map(lambda l: sp.test_account(l), ledgers))
             scenario.p("Check initial ownership")
-            for i in range(3):
+            for i in range(len(ledgers)):
                 scenario.verify(c1.data.ledger[i] == ledgers[i].address)
         ownership_test()
 
