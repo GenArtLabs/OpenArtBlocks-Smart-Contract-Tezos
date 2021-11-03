@@ -768,51 +768,58 @@ def add_test(config, is_default = True):
 
         scenario.h2("Behaviour when all token minted (kinda useless)")
         config.max_editions = 0 # Go out of tokens
-        c1 = FA2(config = config,
+        c2 = FA2(config = config,
             metadata = sp.utils.metadata_of_url("https://example.com"),
             admin = admin.address)
-        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
+
+        scenario += c2
+
+        c2.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
 
         scenario.h3("Activation from admin")
-        c1.set_pause(True).run(sender = admin, valid = True)
-        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
+        c2.set_pause(True).run(sender = admin, valid = True)
+        c2.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
 
         scenario.h3("Deactivation from admin")
-        c1.set_pause(False).run(sender = admin, valid = True)
+        c2.set_pause(False).run(sender = admin, valid = True)
 
         scenario.h3("Activation from non-admin")
-        c1.set_pause(True).run(sender = alice, valid = False)
+        c2.set_pause(True).run(sender = alice, valid = False)
 
         scenario.h3("Deactivation from non-admin")
-        c1.set_pause(True).run(sender = admin, valid = True)
-        c1.set_pause(False).run(sender = alice, valid = False)
+        c2.set_pause(True).run(sender = admin, valid = True)
+        c2.set_pause(False).run(sender = alice, valid = False)
 
         scenario.h2("Behaviour when contract is locked")
         # Reset minted tokens
         config.max_editions = 1000
-        c1 = FA2(config = config,
+        c3 = FA2(config = config,
             metadata = sp.utils.metadata_of_url("https://example.com"),
             admin = admin.address)
-        c1.lock().run(sender = admin, valid = True)
+
+        scenario += c3
+
+        c3.lock().run(sender = admin, valid = True)
 
         scenario.h3("Activation from admin")
-        c1.set_pause(True).run(sender = admin, valid = True)
+        c3.set_pause(True).run(sender = admin, valid = True)
 
         scenario.h3("Mint not possible")
-        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
+        c3.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
 
         scenario.h3("Deactivation from admin")
-        c1.set_pause(False).run(sender = admin, valid = True)
+        c3.set_pause(False).run(sender = admin, valid = True)
 
         scenario.h3("Mint possible")
-        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000))
+        c3.mint(1).run(sender = alice, amount = sp.mutez(1000000))
 
         scenario.h3("Activation from non-admin")
-        c1.set_pause(True).run(sender = alice, valid = False)
+        c3.set_pause(True).run(sender = alice, valid = False)
 
         scenario.h3("Deactivation from non-admin")
-        c1.set_pause(True).run(sender = admin, valid = True)
-        c1.set_pause(False).run(sender = alice, valid = False)
+        c3.set_pause(True).run(sender = admin, valid = True)
+        c3.set_pause(False).run(sender = alice, valid = False)
+
 
     @sp.add_test(name = "tzip12 tests transfer", is_default = is_default)
     def tests_transfer():
@@ -840,7 +847,7 @@ def add_test(config, is_default = True):
         scenario.p("Admin mints a token")
         c1.mint(1).run(sender = admin, amount = sp.mutez(1000000))
 
-        def ownership_test(ledgers=None, quiet=False):
+        def ownership_test(contract, ledgers=None, quiet=False):
             if not quiet:
                 scenario.p("Tokens ownership test")
             if ledgers is None:
@@ -848,8 +855,8 @@ def add_test(config, is_default = True):
                 ledgers = list(map(lambda l: sp.test_account(l), ledgers))
             scenario.p("Check initial ownership")
             for i in range(len(ledgers)):
-                scenario.verify(c1.data.ledger[i] == ledgers[i].address)
-        ownership_test()
+                scenario.verify(contract.data.ledger[i] == ledgers[i].address)
+        ownership_test(c1)
 
         scenario.h2("Simple transfer")
         scenario.h3("Alice sends its token to Bob")
@@ -861,7 +868,7 @@ def add_test(config, is_default = True):
                                                 token_id = 0)
                                     ])
             ]).run(sender = alice)
-        ownership_test([bob, bob, admin])
+        ownership_test(c1, [bob, bob, admin])
 
         scenario.h3("Bob sends its initial token to Bob")
         c1.transfer([
@@ -872,7 +879,7 @@ def add_test(config, is_default = True):
                                                 token_id = 1)
                                     ])
             ]).run(sender = bob)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h3("Alice sends a token to itself")
         c1.transfer([
@@ -883,7 +890,7 @@ def add_test(config, is_default = True):
                                                 token_id = 1)
                                     ])
             ]).run(sender = alice)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h2("Invalid simple transfers")
 
@@ -896,7 +903,7 @@ def add_test(config, is_default = True):
                                                 token_id = 0)
                                     ])
             ]).run(sender = alice, valid=False)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h3("Alice tries to steal a token from Bob")
         c1.transfer([
@@ -907,7 +914,7 @@ def add_test(config, is_default = True):
                                                 token_id = 0)
                                     ])
             ]).run(sender = alice, valid=False)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h3("Alice tries to transfer a non-existing token")
         c1.transfer([
@@ -918,7 +925,7 @@ def add_test(config, is_default = True):
                                                 token_id = 1000)
                                     ])
             ]).run(sender = alice, valid=False)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h3("Alice tries to self-transfer a non-existing token")
         c1.transfer([
@@ -929,7 +936,7 @@ def add_test(config, is_default = True):
                                                 token_id = 1000)
                                     ])
             ]).run(sender = alice, valid=False)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h3("Alice tries to steal a non-existing token from Bob")
         c1.transfer([
@@ -940,7 +947,7 @@ def add_test(config, is_default = True):
                                                 token_id = 1000)
                                     ])
             ]).run(sender = alice, valid=False)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h2("Test existencee of admin special rights")
 
@@ -953,7 +960,7 @@ def add_test(config, is_default = True):
                                                 token_id = 1)
                                     ])
             ]).run(sender = admin, valid=False)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h3("Admin tries to force Alice to give a token to Bob")
         c1.transfer([
@@ -964,7 +971,7 @@ def add_test(config, is_default = True):
                                                 token_id = 1)
                                     ])
             ]).run(sender = admin, valid=False)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h3("Alice tries to transfer a non-existing token")
         c1.transfer([
@@ -975,7 +982,7 @@ def add_test(config, is_default = True):
                                                 token_id = 1000)
                                     ])
             ]).run(sender = alice, valid=False)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h3("Admin tries to self-transfer a non-existing token")
         c1.transfer([
@@ -986,7 +993,7 @@ def add_test(config, is_default = True):
                                                 token_id = 1000)
                                     ])
             ]).run(sender = alice, valid=False)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         scenario.h3("Admin tries to steal a non-existing token from Bob")
         c1.transfer([
@@ -997,7 +1004,7 @@ def add_test(config, is_default = True):
                                                 token_id = 1000)
                                     ])
             ]).run(sender = alice, valid=False)
-        ownership_test([bob, alice, admin])
+        ownership_test(c1, [bob, alice, admin])
 
         return
 
