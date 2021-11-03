@@ -468,18 +468,27 @@ class FA2_lock(FA2_core):
 
 class FA2_mint(FA2_core):
     @sp.entry_point
-    def mint(self):
+    def mint(self, amount):
+        sp.set_type(amount, sp.TInt)
+        sp.verify(amount > 0, message = self.error_message.bad_value())
+
         sp.verify(~ self.is_paused(), message = self.error_message.paused())
+
         sp.verify(sp.amount == sp.mutez(self.config.price), message = self.error_message.bad_value())
+        sp.verify(self.data.all_tokens + sp.as_nat(amount, message = self.error_message.bad_value()) <= self.config.max_editions, message = self.error_message.max_editions_reached())
 
-        token_id = sp.local('token_id', self.data.all_tokens).value
-        sp.verify(token_id < self.config.max_editions, message = self.error_message.max_editions_reached())
+        i = sp.compute(amount)
+        sp.while i > 0:
+            token_id = sp.compute(self.data.all_tokens)
+            sp.verify(token_id < self.config.max_editions, message = self.error_message.max_editions_reached())
 
-        token_hash = sp.keccak(sp.pack(sp.record(now=sp.now, s=sp.sender, tid=token_id)))
+            token_hash = sp.keccak(sp.pack(sp.record(now=sp.now, s=sp.sender, tid=token_id)))
 
-        self.data.ledger[token_id] = sp.sender
-        self.data.hashes[token_id] = token_hash
-        self.token_id_set.add(self.data.all_tokens, token_id)
+            self.data.ledger[token_id] = sp.sender
+            self.data.hashes[token_id] = token_hash
+            self.token_id_set.add(self.data.all_tokens, token_id)
+
+            i.set(i - 1)
 
 
 class FA2_script(FA2_core):
@@ -688,7 +697,7 @@ def add_test(config, is_default = True):
         c1.set_base_uri(url).run(sender = admin)
 
         scenario.h2("Mint")
-        minted = c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        minted = c1.mint(1).run(sender = alice, amount = sp.mutez(1000000))
         scenario.verify(c1.data.ledger[0] == alice.address)
 
         scenario.h2("Set base URI")
@@ -696,15 +705,15 @@ def add_test(config, is_default = True):
         scenario.verify(resultingUri == sp.bytes('0x' + ''.join([hex(ord(c))[2:] for c in stringUrl + '0'])))
 
         scenario.h2("Fail because of bad price")
-        c1.mint().run(sender = alice, amount = sp.mutez(2), valid = False)
+        c1.mint(1).run(sender = alice, amount = sp.mutez(2), valid = False)
 
         scenario.h2("Test ledger")
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000))
         scenario.verify(c1.data.ledger[0] == alice.address)
         scenario.verify(c1.data.ledger[1] == alice.address)
 
         scenario.h2("Mint when max number of token reached")
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid = False)
+        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid = False)
 
     @sp.add_test(name = "Tests pause", is_default = is_default)
     def tests_pause():
@@ -723,7 +732,7 @@ def add_test(config, is_default = True):
         scenario += c1
 
         scenario.h2("Mint without pause")
-        minted = c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        minted = c1.mint(1).run(sender = alice, amount = sp.mutez(1000000))
         scenario.verify(c1.data.ledger[0] == alice.address)
 
         scenario.h2("Pause")
@@ -732,8 +741,8 @@ def add_test(config, is_default = True):
         c1.set_pause(True).run(sender = admin, valid = True)
 
         scenario.h3("Mint not possible")
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=False)
-        c1.mint().run(sender = admin, amount = sp.mutez(1000000), valid=False)
+        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
+        c1.mint(1).run(sender = admin, amount = sp.mutez(1000000), valid=False)
 
         scenario.h2("Pause activation while pause is already active")
 
@@ -741,14 +750,14 @@ def add_test(config, is_default = True):
         c1.set_pause(True).run(sender = admin, valid = True)
 
         scenario.h3("Mint still not possible")
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=False)
+        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
 
         scenario.h2("Pause de-activation")
         c1.set_pause(False).run(sender = admin, valid = True)
 
         scenario.h3("Mint possible again")
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=True)
-        c1.mint().run(sender = admin, amount = sp.mutez(1000000), valid=True)
+        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=True)
+        c1.mint(1).run(sender = admin, amount = sp.mutez(1000000), valid=True)
 
         scenario.h2("Pause from non-admin")
         c1.set_pause(True).run(sender = alice, valid = False)
@@ -762,11 +771,11 @@ def add_test(config, is_default = True):
         c1 = FA2(config = config,
             metadata = sp.utils.metadata_of_url("https://example.com"),
             admin = admin.address)
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=False)
+        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
 
         scenario.h3("Activation from admin")
         c1.set_pause(True).run(sender = admin, valid = True)
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=False)
+        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
 
         scenario.h3("Deactivation from admin")
         c1.set_pause(False).run(sender = admin, valid = True)
@@ -790,13 +799,13 @@ def add_test(config, is_default = True):
         c1.set_pause(True).run(sender = admin, valid = True)
 
         scenario.h3("Mint not possible")
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=False)
+        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
 
         scenario.h3("Deactivation from admin")
         c1.set_pause(False).run(sender = admin, valid = True)
 
         scenario.h3("Mint possible")
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000))
 
         scenario.h3("Activation from non-admin")
         c1.set_pause(True).run(sender = alice, valid = False)
@@ -823,13 +832,13 @@ def add_test(config, is_default = True):
 
         scenario.h2("Initial Minting")
         scenario.p("Alice mints a token")
-        c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        c1.mint(1).run(sender = alice, amount = sp.mutez(1000000))
 
         scenario.p("Bob mints a token")
-        c1.mint().run(sender = bob, amount = sp.mutez(1000000))
+        c1.mint(1).run(sender = bob, amount = sp.mutez(1000000))
 
         scenario.p("Admin mints a token")
-        c1.mint().run(sender = admin, amount = sp.mutez(1000000))
+        c1.mint(1).run(sender = admin, amount = sp.mutez(1000000))
 
         def ownership_test(ledgers=None, quiet=False):
             if not quiet:
