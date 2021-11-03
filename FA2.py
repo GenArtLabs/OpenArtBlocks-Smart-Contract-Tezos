@@ -397,19 +397,13 @@ class FA2_core(sp.Contract):
             sp.for update in params:
                 with update.match_cases() as arg:
                     with arg.match("add_operator") as upd:
-                        sp.verify(
-                            (upd.owner == sp.sender) | self.is_administrator(sp.sender),
-                            message = self.error_message.not_admin_or_operator()
-                        )
+                        sp.verify(upd.owner == sp.sender, message = self.error_message.not_owner())
                         self.operator_set.add(self.data.operators,
                                               upd.owner,
                                               upd.operator,
                                               upd.token_id)
                     with arg.match("remove_operator") as upd:
-                        sp.verify(
-                            (upd.owner == sp.sender) | self.is_administrator(sp.sender),
-                            message = self.error_message.not_admin_or_operator()
-                        )
+                        sp.verify(upd.owner == sp.sender, message = self.error_message.not_owner())
                         self.operator_set.remove(self.data.operators,
                                                  upd.owner,
                                                  upd.operator,
