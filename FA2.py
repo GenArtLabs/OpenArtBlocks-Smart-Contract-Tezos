@@ -181,22 +181,6 @@ class Operator_param:
                       operator = operator,
                       token_id = token_id)
         return sp.set_type_expr(r, self.get_type())
-##
-## `Set_script_param` defines type types for the `%set_script` entry-point.
-class Set_script_param:
-    def __init__(self, config):
-        self.config = config
-    def get_type(self):
-        t = sp.TRecord(
-            collection = sp.TNat,
-            script = sp.TString)
-        return t
-    def make(self, collection, script):
-        r = sp.record(collection = collection,
-                      script = script)
-        return sp.set_type_expr(r, self.get_type())
-
-
 
 ## The link between operators and the addresses they operate is kept
 ## in a *lazy set* of `(owner × operator × token-id)` values.
@@ -310,7 +294,6 @@ class FA2_core(sp.Contract):
         self.error_message = Error_message(self.config)
         self.operator_set = Operator_set(self.config)
         self.operator_param = Operator_param(self.config)
-        self.set_script_param = Set_script_param(self.config)
         self.token_id_set = Token_id_set(self.config)
         # TODO understand self.ledger_key = Ledger_key(self.config)
         self.token_meta_data = Token_meta_data(self.config)
@@ -327,7 +310,7 @@ class FA2_core(sp.Contract):
             metadata = metadata,
             price = self.config.price,
             max_editions = self.config.max_editions,
-            scripts = self.config.my_map(tkey = sp.TNat, tvalue = sp.TString),
+            script = sp.string(""),
             base_uri = sp.utils.bytes_of_string(self.config.base_uri),
             **extra_storage
         )
@@ -493,12 +476,11 @@ class FA2_mint(FA2_core):
 
 class FA2_script(FA2_core):
     @sp.entry_point
-    def set_script(self, params):
+    def set_script(self, script):
         sp.verify(~ self.is_locked(), message = self.error_message.locked())
         sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
-        sp.set_type(params, self.set_script_param.get_type())
-        # TODO fails for non-exitsant collection
-        self.data.scripts[params.collection] = params.script
+        sp.set_type(script, sp.TString)
+        self.data.script.set(script)
 
 class FA2_base_uri(FA2_core):
     @sp.entry_point
