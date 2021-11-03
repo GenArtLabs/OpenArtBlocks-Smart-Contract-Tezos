@@ -701,7 +701,6 @@ def add_test(config, is_default = True):
     @sp.add_test(name = "Tests pause", is_default = is_default)
     def tests_pause():
         scenario = sp.test_scenario()
-        scenario.table_of_contents()
 
         admin, [alice, bob] = get_addresses()
 
@@ -711,6 +710,7 @@ def add_test(config, is_default = True):
             admin = admin.address)
 
         scenario.h1("Tests pause")
+        scenario.table_of_contents()
 
         scenario += c1
 
