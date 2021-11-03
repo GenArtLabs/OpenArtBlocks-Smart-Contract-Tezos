@@ -35,7 +35,6 @@ class FA2_config:
                  support_operator                   = True,
                  store_total_supply                 = True,
                  allow_self_transfer                = False,
-                 use_token_metadata_offchain_view   = True,
                  price                              = 1000000,
                  max_editions                       = 2,
                  base_uri                       = "https://open-artblocks.herokuapp.com/api/",
@@ -52,9 +51,6 @@ class FA2_config:
         self.price = price
         self.max_editions = max_editions
         self.base_uri = base_uri
-
-        self.use_token_metadata_offchain_view = use_token_metadata_offchain_view
-        # Include offchain view for accessing the token metadata (requires TZIP-016 contract metadata)
 
         self.non_fungible = non_fungible
         # Enforce the non-fungibility of the tokens, i.e. the fact
@@ -596,9 +592,8 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_lock, 
 
         if config.store_total_supply:
             list_of_views = list_of_views + [self.total_supply]
-        if config.use_token_metadata_offchain_view:
-            self.set_token_metadata_view()
-            list_of_views = list_of_views + [self.token_metadata]
+        self.set_token_metadata_view()
+        list_of_views = list_of_views + [self.token_metadata]
 
         metadata_base = {
             "version": config.name # will be changed if using fatoo.
@@ -1058,7 +1053,6 @@ def environment_config():
         support_operator = global_parameter("support_operator", True),
         store_total_supply = global_parameter("store_total_supply", False),
         allow_self_transfer = global_parameter("allow_self_transfer", False),
-        use_token_metadata_offchain_view = global_parameter("use_token_metadata_offchain_view", True),
     )
 
 ## ## Standard “main”
