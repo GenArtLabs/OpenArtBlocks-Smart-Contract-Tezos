@@ -660,15 +660,21 @@ class View_consumer(sp.Contract):
 ## The best way to visualize them is to use the online IDE
 ## (<https://www.smartpy.io/ide/>).
 def add_test(config, is_default = True):
-    @sp.add_test(name = config.name, is_default = is_default)
-    def test():
-        scenario = sp.test_scenario()
-        scenario.h1("FA2 Contract Name: " + config.name)
-        scenario.table_of_contents()
+    def get_addresses():
         # sp.test_account generates ED25519 key-pairs deterministically:
         admin = sp.test_account("Administrator")
         alice = sp.test_account("Alice")
         bob   = sp.test_account("Robert")
+        return admin, [alice, bob]
+
+    @sp.add_test(name = "Basic test", is_default = is_default)
+    def basic_test():
+        scenario = sp.test_scenario()
+        scenario.h1("FA2 Contract Name: " + config.name)
+        scenario.table_of_contents()
+
+        admin, [alice, bob] = get_addresses()
+
         # Let's display the accounts:
         scenario.h2("Accounts")
         scenario.show([admin, alice, bob])
@@ -677,20 +683,76 @@ def add_test(config, is_default = True):
                  admin = admin.address)
         scenario += c1
 
-        scenario.h2("Mint")
-
         stringUrl = 'https://yo.com/api/'
         url = sp.bytes('0x' + ''.join([hex(ord(c))[2:] for c in stringUrl]))
         c1.set_base_uri(url).run(sender = admin)
+
+        scenario.h2("Mint")
         minted = c1.mint().run(sender = alice, amount = sp.mutez(1000000))
         scenario.verify(c1.data.ledger[0] == alice.address)
+
+        scenario.h2("Set base URI")
+        resultingUri = c1.token_metadata(0).token_info['']
+        scenario.verify(resultingUri == sp.bytes('0x' + ''.join([hex(ord(c))[2:] for c in stringUrl + '0'])))
 
         scenario.h2("Fail because of bad price")
         c1.mint().run(sender = alice, amount = sp.mutez(2), valid = False)
 
-        resultingUri = c1.token_metadata(0).token_info['']
-        scenario.verify(resultingUri == sp.bytes('0x' + ''.join([hex(ord(c))[2:] for c in stringUrl + '0'])))
+    @sp.add_test(name = "Tests pause", is_default = is_default)
+    def tests_pause():
+        scenario = sp.test_scenario()
+        scenario.table_of_contents()
 
+        admin, [alice, bob] = get_addresses()
+
+        config.max_editions = 10000
+        c1 = FA2(config = config,
+            metadata = sp.utils.metadata_of_url("https://example.com"),
+            admin = admin.address)
+
+        scenario.h1("Tests pause")
+
+        scenario += c1
+
+        scenario.h2("Mint without pause")
+        minted = c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+        scenario.verify(c1.data.ledger[0] == alice.address)
+
+        scenario.h2("Pause")
+
+        scenario.h3("Activation")
+        c1.set_pause(True).run(sender = admin, valid = True)
+
+        scenario.h3("Mint not possible")
+        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=False)
+        c1.mint().run(sender = admin, amount = sp.mutez(1000000), valid=False)
+
+        scenario.h2("Pause activation while pause is already active")
+
+        scenario.h3("Over-activation")
+        c1.set_pause(True).run(sender = admin, valid = True)
+
+        scenario.h3("Mint still not possible")
+        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=False)
+
+        scenario.h2("Pause de-activation")
+        c1.set_pause(False).run(sender = admin, valid = True)
+
+        scenario.h3("Mint possible again")
+        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=True)
+        c1.mint().run(sender = admin, amount = sp.mutez(1000000), valid=True)
+
+        scenario.h2("Pause from non-admin")
+        c1.set_pause(True).run(sender = alice, valid = False)
+
+        scenario.h2("Pause deactivation from non-admin")
+        c1.set_pause(True).run(sender = admin, valid = True)
+        c1.set_pause(False).run(sender = alice, valid = False)
+
+
+    @sp.add_test(name = config.name, is_default = is_default)
+    def test():
+        return
         scenario.h2("Test ledger")
         # c1.mint().run(sender = alice, amount = sp.mutez(1000000))
         # scenario.verify(c1.data.ledger[0] == alice.address)
