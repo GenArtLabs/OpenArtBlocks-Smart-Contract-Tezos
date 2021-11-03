@@ -802,7 +802,6 @@ def add_test(config, is_default = True):
         c3.set_pause(True).run(sender = admin, valid = True)
         c3.set_pause(False).run(sender = alice, valid = False)
 
-
     def set_and_test_base_uri(stringUrl, scenario, contract, sender, valid = True):
         url = sp.bytes('0x' + ''.join([hex(ord(c))[2:] for c in stringUrl]))
         contract.set_base_uri(url).run(sender = sender, valid = valid)
@@ -813,6 +812,13 @@ def add_test(config, is_default = True):
         else:
             scenario.verify(resultingUri != expectedUri)
 
+    def set_and_test_script(newScript, scenario, contract, sender, valid = True):
+        contract.set_script(newScript).run(sender = sender, valid = valid)
+        resultingScript = contract.data.script
+        if (valid):
+            scenario.verify(resultingScript == newScript)
+        else:
+            scenario.verify(resultingScript != newScript)
 
     @sp.add_test(name = "Lock test", is_default = is_default)
     def lock_test():
@@ -834,6 +840,7 @@ def add_test(config, is_default = True):
 
         scenario.h3("set_base_uri without lock")
         set_and_test_base_uri('https://example1.com/api/', scenario, c1, admin)
+        set_and_test_script('alert(1);', scenario, c1, admin)
 
         scenario.h2("Lock")
 
@@ -842,12 +849,14 @@ def add_test(config, is_default = True):
 
         scenario.h3("set_base_uri still possible")
         set_and_test_base_uri('https://example2.com/api/', scenario, c1, admin)
+        set_and_test_script('alert(2);', scenario, c1, admin)
 
         scenario.h3("Lock from admin")
         c1.lock().run(sender = admin)
 
         scenario.h3("set_base_uri impossible with lock")
         set_and_test_base_uri('https://example3.com/api/', scenario, c1, admin, False)
+        set_and_test_script('alert(3);', scenario, c1, admin, False)
 
         scenario.h2("Lock activation when lock is already active")
 
@@ -856,6 +865,7 @@ def add_test(config, is_default = True):
 
         scenario.h3("set_base_uri still impossible with lock")
         set_and_test_base_uri('https://example4.com/api/', scenario, c1, admin, False)
+        set_and_test_script('alert(4);', scenario, c1, admin, False)
 
         scenario.h2("Lock when all tokens are minted (new contract)")
         config.max_editions = 1
@@ -868,18 +878,21 @@ def add_test(config, is_default = True):
         c2.mint(1).run(sender = alice, amount = sp.mutez(1000000))
         c2.mint(1).run(sender = alice, amount = sp.mutez(1000000), valid=False)
         set_and_test_base_uri('https://example1.com/api/', scenario, c2, admin)
+        set_and_test_script('alert(1);', scenario, c2, admin)
 
         scenario.h3("Lock from non-admin")
         c2.lock().run(sender = alice, valid = False)
 
         scenario.h3("set_base_uri still possible")
         set_and_test_base_uri('https://example2.com/api/', scenario, c2, admin)
+        set_and_test_script('alert(2);', scenario, c2, admin)
 
         scenario.h3("Lock from admin")
         c2.lock().run(sender = admin, valid = True)
 
         scenario.h3("set_base_uri impossible with lock")
         set_and_test_base_uri('https://example3.com/api/', scenario, c2, admin, False)
+        set_and_test_script('alert(3);', scenario, c2, admin, False)
 
     @sp.add_test(name = "tzip12 tests transfer", is_default = is_default)
     def tests_transfer():
