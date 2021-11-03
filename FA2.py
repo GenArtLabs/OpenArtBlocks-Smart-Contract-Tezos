@@ -1053,6 +1053,7 @@ def environment_config():
         support_operator = global_parameter("support_operator", True),
         store_total_supply = global_parameter("store_total_supply", False),
         allow_self_transfer = global_parameter("allow_self_transfer", False),
+        max_editions = global_parameter("max_editions", 2),
     )
 
 ## ## Standard “main”
@@ -1061,9 +1062,6 @@ def environment_config():
 ## for the browser version.
 if "templates" not in __name__:
     add_test(environment_config())
-    if not global_parameter("only_environment_test", False):
-        add_test(FA2_config(non_fungible = True),
-                 is_default = not sp.in_browser)
 
     sp.add_compilation_target("FA2_comp", FA2(config = environment_config(),
                               metadata = sp.utils.metadata_of_url("https://example.com"),
