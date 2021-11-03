@@ -1019,13 +1019,10 @@ def add_test(config, is_default = True):
         scenario.h2("Initial Minting")
 
         scenario.p("Alice mints 3 tokens")
-        c2.mint(1).run(sender = alice, amount = sp.mutez(1000000))
-        c2.mint(1).run(sender = alice, amount = sp.mutez(1000000))
-        c2.mint(1).run(sender = alice, amount = sp.mutez(1000000))
+        c2.mint(3).run(sender = alice, amount = sp.mutez(1000000))
 
         scenario.p("Bob mints 2 tokens")
-        c2.mint(1).run(sender = bob, amount = sp.mutez(1000000))
-        c2.mint(1).run(sender = bob, amount = sp.mutez(1000000))
+        c2.mint(2).run(sender = bob, amount = sp.mutez(1000000))
 
         scenario.p("Admin mints 1 token")
         c2.mint(1).run(sender = admin, amount = sp.mutez(1000000))
