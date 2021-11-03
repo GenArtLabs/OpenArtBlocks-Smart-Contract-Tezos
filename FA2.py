@@ -1019,16 +1019,16 @@ def add_test(config, is_default = True):
         scenario.h2("Initial Minting")
 
         scenario.p("Alice mints 3 tokens")
-        c2.mint().run(sender = alice, amount = sp.mutez(1000000))
-        c2.mint().run(sender = alice, amount = sp.mutez(1000000))
-        c2.mint().run(sender = alice, amount = sp.mutez(1000000))
+        c2.mint(1).run(sender = alice, amount = sp.mutez(1000000))
+        c2.mint(1).run(sender = alice, amount = sp.mutez(1000000))
+        c2.mint(1).run(sender = alice, amount = sp.mutez(1000000))
 
         scenario.p("Bob mints 2 tokens")
-        c2.mint().run(sender = bob, amount = sp.mutez(1000000))
-        c2.mint().run(sender = bob, amount = sp.mutez(1000000))
+        c2.mint(1).run(sender = bob, amount = sp.mutez(1000000))
+        c2.mint(1).run(sender = bob, amount = sp.mutez(1000000))
 
         scenario.p("Admin mints 1 token")
-        c2.mint().run(sender = admin, amount = sp.mutez(1000000))
+        c2.mint(1).run(sender = admin, amount = sp.mutez(1000000))
         ownership_test(c2, [alice]*3 + [bob]*2 + [admin])
 
         scenario.h3("Alice sends 2 tokens to Bob")
