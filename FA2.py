@@ -791,22 +791,150 @@ def add_test(config, is_default = True):
         c1.set_pause(True).run(sender = admin, valid = True)
         c1.set_pause(False).run(sender = alice, valid = False)
 
+    @sp.add_test(name = "tzip12 tests transfer", is_default = is_default)
+    def tests_transfer():
+        scenario = sp.test_scenario()
 
-    @sp.add_test(name = config.name, is_default = is_default)
-    def test():
-        return
-#ICICICICICICICI
-#ICICICICICICICI
-#ICICICICICICICI
-#ICICICICICICICI
-#ICICICICICICICI
-#ICICICICICICICI
-#ICICICICICICICI
-#ICICICICICICICI
-#ICICICICICICICI
+        admin, [alice, bob] = get_addresses()
+
+        config.max_editions = 10000
+        c1 = FA2(config = config,
+            metadata = sp.utils.metadata_of_url("https://example.com"),
+            admin = admin.address)
+
+        scenario.h1("Tests transfer")
+        scenario.table_of_contents()
+
+        scenario += c1
 
         scenario.h2("Initial Minting")
-        scenario.p("The administrator mints 100 token-0's to Alice.")
+        scenario.p("Alice mints a token")
+        c1.mint().run(sender = alice, amount = sp.mutez(1000000))
+
+        scenario.p("Bob mints a token")
+        c1.mint().run(sender = bob, amount = sp.mutez(1000000))
+
+        scenario.p("Check initial ownership")
+        scenario.verify(c1.data.ledger[0] == alice.address)
+        scenario.verify(c1.data.ledger[1] == bob.address)
+
+        scenario.h2("Simple transfer")
+        scenario.h3("Alice sends its token to Bob")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = alice)
+
+        scenario.p("Ownership test")
+        scenario.verify(c1.data.ledger[0] == bob.address)
+        scenario.verify(c1.data.ledger[1] == bob.address)
+
+        scenario.h3("Bob sends its initial token to Bob")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = bob.address,
+                                    txs = [
+                                        sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 1)
+                                    ])
+            ]).run(sender = bob)
+
+        scenario.p("Ownership test")
+        scenario.verify(c1.data.ledger[0] == bob.address)
+        scenario.verify(c1.data.ledger[1] == alice.address)
+
+        scenario.h3("Alice sends a token to itself")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 1)
+                                    ])
+            ]).run(sender = alice)
+
+        scenario.p("Ownership test")
+        scenario.verify(c1.data.ledger[0] == bob.address)
+        scenario.verify(c1.data.ledger[1] == alice.address)
+
+        scenario.h2("Invalid simple transfers")
+
+        scenario.h3("Alice tries to send its initial token to Bob")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = alice, valid=False)
+
+        scenario.p("Ownership test")
+        scenario.verify(c1.data.ledger[0] == bob.address)
+        scenario.verify(c1.data.ledger[1] == alice.address)
+
+        scenario.h3("Alice tries to steal a token from Bob")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = bob.address,
+                                    txs = [
+                                        sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = alice, valid=False)
+
+        scenario.p("Ownership test")
+        scenario.verify(c1.data.ledger[0] == bob.address)
+        scenario.verify(c1.data.ledger[1] == alice.address)
+
+        scenario.h3("Alice tries to transfer a non-existing token")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = alice, valid=False)
+
+        scenario.p("Ownership test")
+        scenario.verify(c1.data.ledger[0] == bob.address)
+        scenario.verify(c1.data.ledger[1] == alice.address)
+
+        scenario.h3("Alice tries to self-transfer a non-existing token")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = alice, valid=False)
+
+        scenario.p("Ownership test")
+        scenario.verify(c1.data.ledger[0] == bob.address)
+        scenario.verify(c1.data.ledger[1] == alice.address)
+
+        scenario.h3("Alice tries to steal a non-existing token from Bob")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = bob.address,
+                                    txs = [
+                                        sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = alice, valid=False)
+
+        scenario.p("Ownership test")
+        scenario.verify(c1.data.ledger[0] == bob.address)
+        scenario.verify(c1.data.ledger[1] == alice.address)
+
+        return
+
         tok0_md = FA2.make_metadata(
             name = "The Token Zero",
             decimals = 2,
@@ -923,14 +1051,31 @@ def add_test(config, is_default = True):
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
                                         sp.record(to_ = bob.address,
-                                                  amount = 1000,
-                                                  token_id = 0)])
+                                                amount = 1000,
+                                                token_id = 0)])
             ]).run(sender = admin, valid = False)
         scenario.h3("Consumer Contract for Callback Calls.")
         consumer = View_consumer(c1)
         scenario += consumer
         scenario.p("Consumer virtual address: "
-                   + consumer.address.export())
+                + consumer.address.export())
+
+
+
+    @sp.add_test(name = config.name, is_default = is_default)
+    def test():
+        return
+#ICICICICICICICI
+#ICICICICICICICI
+#ICICICICICICICI
+#ICICICICICICICI
+#ICICICICICICICI
+#ICICICICICICICI
+#ICICICICICICICI
+#ICICICICICICICI
+#ICICICICICICICI
+
+
         scenario.h2("Balance-of.")
         def arguments_for_balance_of(receiver, reqs):
             return (sp.record(
