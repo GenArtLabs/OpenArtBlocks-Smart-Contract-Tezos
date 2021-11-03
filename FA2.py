@@ -767,6 +767,23 @@ def add_test(config, is_default = True):
         c1.set_pause(True).run(sender = admin, valid = True)
         c1.set_pause(False).run(sender = alice, valid = False)
 
+        scenario.h2("Behaviour when contract is locked")
+        c1.lock().run(sender = admin, valid = True)
+
+        scenario.h3("Activation from admin")
+        c1.set_pause(True).run(sender = admin, valid = True)
+
+        scenario.h3("Deactivation from admin")
+        c1.set_pause(False).run(sender = admin, valid = True)
+
+        scenario.h3("Activation from non-admin")
+        c1.set_pause(True).run(sender = alice, valid = False)
+
+        scenario.h3("Deactivation from non-admin")
+        c1.set_pause(True).run(sender = admin, valid = True)
+        c1.set_pause(False).run(sender = alice, valid = False)
+
+
     @sp.add_test(name = config.name, is_default = is_default)
     def test():
         return
