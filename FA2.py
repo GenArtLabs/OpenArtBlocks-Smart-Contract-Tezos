@@ -1260,6 +1260,22 @@ def add_test(config, is_default = True):
         ownership_test(c2, [bob] + [admin] + [alice]*2 + [admin]*2)
         scenario.p("Transaction has been cancelled")
 
+        scenario.h4("Alice tries to force Bob to send 2 tokens to Admin")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = bob.address,
+                                    txs = [
+                                        sp.record(to_ = admin.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ] + [
+                                        sp.record(to_ = admin.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = alice, valid=False)
+        ownership_test(c2, [bob] + [admin] + [alice]*2 + [admin]*2)
+        scenario.p("Transaction has been cancelled")
+
         return
 
         tok0_md = FA2.make_metadata(
