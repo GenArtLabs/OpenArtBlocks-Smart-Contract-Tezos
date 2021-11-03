@@ -758,7 +758,10 @@ def add_test(config, is_default = True):
         c1.set_pause(False).run(sender = alice, valid = False)
 
         scenario.h2("Behaviour when all token minted (kinda useless)")
-        c1.config.max_editions = c1.data.all_tokens # Go out of tokens
+        config.max_editions = 0 # Go out of tokens
+        c1 = FA2(config = config,
+            metadata = sp.utils.metadata_of_url("https://example.com"),
+            admin = admin.address)
         c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=False)
 
         scenario.h3("Activation from admin")
@@ -776,13 +779,24 @@ def add_test(config, is_default = True):
         c1.set_pause(False).run(sender = alice, valid = False)
 
         scenario.h2("Behaviour when contract is locked")
+        # Reset minted tokens
+        config.max_editions = 1000
+        c1 = FA2(config = config,
+            metadata = sp.utils.metadata_of_url("https://example.com"),
+            admin = admin.address)
         c1.lock().run(sender = admin, valid = True)
 
         scenario.h3("Activation from admin")
         c1.set_pause(True).run(sender = admin, valid = True)
 
+        scenario.h3("Mint not possible")
+        c1.mint().run(sender = alice, amount = sp.mutez(1000000), valid=False)
+
         scenario.h3("Deactivation from admin")
         c1.set_pause(False).run(sender = admin, valid = True)
+
+        scenario.h3("Mint possible")
+        c1.mint().run(sender = alice, amount = sp.mutez(1000000))
 
         scenario.h3("Activation from non-admin")
         c1.set_pause(True).run(sender = alice, valid = False)
