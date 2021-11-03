@@ -932,7 +932,10 @@ def add_test(config, is_default = True):
         ownership_test(c1)
 
         scenario.h2("Simple transfer")
-        scenario.h3("Alice sends its token to Bob")
+
+        scenario.h3("Valid testcases")
+
+        scenario.h4("Alice sends its token to Bob")
         c1.transfer([
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
@@ -943,7 +946,7 @@ def add_test(config, is_default = True):
             ]).run(sender = alice)
         ownership_test(c1, [bob, bob, admin])
 
-        scenario.h3("Bob sends its initial token to Bob")
+        scenario.h4("Bob sends its initial token to Bob")
         c1.transfer([
                 c1.batch_transfer.item(from_ = bob.address,
                                     txs = [
@@ -954,7 +957,7 @@ def add_test(config, is_default = True):
             ]).run(sender = bob)
         ownership_test(c1, [bob, alice, admin])
 
-        scenario.h3("Alice sends a token to itself")
+        scenario.h4("Alice sends a token to itself")
         c1.transfer([
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
@@ -965,9 +968,9 @@ def add_test(config, is_default = True):
             ]).run(sender = alice)
         ownership_test(c1, [bob, alice, admin])
 
-        scenario.h2("Invalid simple transfers")
+        scenario.h3("Invalid testcases")
 
-        scenario.h3("Alice tries to send its initial token to Bob")
+        scenario.h4("Alice tries to send its initial token to Bob")
         c1.transfer([
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
@@ -978,7 +981,7 @@ def add_test(config, is_default = True):
             ]).run(sender = alice, valid=False)
         ownership_test(c1, [bob, alice, admin])
 
-        scenario.h3("Alice tries to steal a token from Bob")
+        scenario.h4("Alice tries to steal a token from Bob")
         c1.transfer([
                 c1.batch_transfer.item(from_ = bob.address,
                                     txs = [
@@ -989,7 +992,7 @@ def add_test(config, is_default = True):
             ]).run(sender = alice, valid=False)
         ownership_test(c1, [bob, alice, admin])
 
-        scenario.h3("Alice tries to transfer a non-existing token")
+        scenario.h4("Alice tries to transfer a non-existing token")
         c1.transfer([
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
@@ -1000,7 +1003,7 @@ def add_test(config, is_default = True):
             ]).run(sender = alice, valid=False)
         ownership_test(c1, [bob, alice, admin])
 
-        scenario.h3("Alice tries to self-transfer a non-existing token")
+        scenario.h4("Alice tries to self-transfer a non-existing token")
         c1.transfer([
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
@@ -1011,7 +1014,7 @@ def add_test(config, is_default = True):
             ]).run(sender = alice, valid=False)
         ownership_test(c1, [bob, alice, admin])
 
-        scenario.h3("Alice tries to steal a non-existing token from Bob")
+        scenario.h4("Alice tries to steal a non-existing token from Bob")
         c1.transfer([
                 c1.batch_transfer.item(from_ = bob.address,
                                     txs = [
