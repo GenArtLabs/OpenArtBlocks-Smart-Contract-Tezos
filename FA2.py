@@ -1006,6 +1006,46 @@ def add_test(config, is_default = True):
             ]).run(sender = alice, valid=False)
         ownership_test(c1, [bob, alice, admin])
 
+        scenario.h2("Multiple transfer")
+
+        # Reset contract
+        config.max_editions = 10000
+        c2 = FA2(config = config,
+            metadata = sp.utils.metadata_of_url("https://example.com"),
+            admin = admin.address)
+
+        scenario += c2
+
+        scenario.h2("Initial Minting")
+
+        scenario.p("Alice mints 3 tokens")
+        c2.mint().run(sender = alice, amount = sp.mutez(1000000))
+        c2.mint().run(sender = alice, amount = sp.mutez(1000000))
+        c2.mint().run(sender = alice, amount = sp.mutez(1000000))
+
+        scenario.p("Bob mints 2 tokens")
+        c2.mint().run(sender = bob, amount = sp.mutez(1000000))
+        c2.mint().run(sender = bob, amount = sp.mutez(1000000))
+
+        scenario.p("Admin mints 1 token")
+        c2.mint().run(sender = admin, amount = sp.mutez(1000000))
+        ownership_test(c2, [alice]*3 + [bob]*2 + [admin])
+
+        scenario.h3("Alice sends 2 tokens to Bob")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ] + [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 1)
+                                    ])
+            ]).run(sender = alice)
+        ownership_test(c2, [bob]*2 + [alice] + [bob]*2 + [admin])
+
         return
 
         tok0_md = FA2.make_metadata(
