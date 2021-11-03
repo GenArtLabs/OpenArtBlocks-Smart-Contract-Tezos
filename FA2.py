@@ -1089,8 +1089,6 @@ def add_test(config, is_default = True):
 
         scenario += c2
 
-        scenario.h2("Initial Minting")
-
         scenario.p("Alice mints 3 tokens")
         c2.mint(3).run(sender = alice, amount = sp.mutez(1000000))
 
@@ -1101,7 +1099,9 @@ def add_test(config, is_default = True):
         c2.mint(1).run(sender = admin, amount = sp.mutez(1000000))
         ownership_test(c2, [alice]*3 + [bob]*2 + [admin])
 
-        scenario.h3("Alice sends 2 tokens to Bob")
+        scenario.h3("Valid cases")
+
+        scenario.h4("Alice sends 2 tokens to Bob")
         c2.transfer([
                 c2.batch_transfer.item(from_ = alice.address,
                                     txs = [
@@ -1115,6 +1115,150 @@ def add_test(config, is_default = True):
                                     ])
             ]).run(sender = alice)
         ownership_test(c2, [bob]*2 + [alice] + [bob]*2 + [admin])
+
+        scenario.h4("Alice sends 2 times the same token to itself")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ] + [
+                                        sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = alice)
+        ownership_test(c2, [bob]*2 + [alice] + [bob]*2 + [admin])
+
+        scenario.h4("Bob sends 1 token to Alice and 1 token to Admin")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = bob.address,
+                                    txs = [
+                                        sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 3)
+                                    ] + [
+                                        sp.record(to_ = admin.address,
+                                                amount = 1,
+                                                token_id = 4)
+                                    ])
+            ]).run(sender = bob)
+        ownership_test(c2, [bob]*2 + [alice]*2 + [admin]*2)
+
+        scenario.h4("Bob sends 1 token to Admin and twice the same token to itself")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = bob.address,
+                                    txs = [
+                                        sp.record(to_ = admin.address,
+                                                amount = 1,
+                                                token_id = 1)
+                                    ] + [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ] + [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = bob)
+        ownership_test(c2, [bob] + [admin] + [alice]*2 + [admin]*2)
+
+        scenario.h4("Alice sends the same token to both itself and Bob")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ] + [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = alice)
+        ownership_test(c2, [bob] + [admin] + [bob] + [alice] + [admin]*2)
+
+        scenario.h4("Bob sends the same token to both Alice and itself (order)")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = bob.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ] + [
+                                        sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = bob)
+        ownership_test(c2, [bob] + [admin] + [alice]*2 + [admin]*2)
+
+        scenario.h3("Invalid cases")
+
+        scenario.h4("Alice sends 1 legit token and 1 non-existing token to Bob")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ] + [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 1000)
+                                    ])
+            ]).run(sender = alice, valid=False)
+        ownership_test(c2, [bob] + [admin] + [alice]*2 + [admin]*2)
+        scenario.p("Transaction has been cancelled")
+
+        scenario.h4("Alice sends 2 non-existing tokens to Bob")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 1000)
+                                    ] + [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 1001)
+                                    ])
+            ]).run(sender = alice, valid=False)
+        ownership_test(c2, [bob] + [admin] + [alice]*2 + [admin]*2)
+
+        scenario.h4("Alice sends 2 times the same token to Bob")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ] + [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = alice, valid=False)
+        ownership_test(c2, [bob] + [admin] + [alice]*2 + [admin]*2)
+        scenario.p("Transaction has been cancelled")
+
+        scenario.h4("Alice sends the same token to both Bob and Admin")
+        c2.transfer([
+                c2.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ] + [
+                                        sp.record(to_ = admin.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = alice, valid=False)
+        ownership_test(c2, [bob] + [admin] + [alice]*2 + [admin]*2)
+        scenario.p("Transaction has been cancelled")
 
         return
 
