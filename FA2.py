@@ -892,7 +892,7 @@ def add_test(config, is_default = True):
                                     txs = [
                                         sp.record(to_ = bob.address,
                                                 amount = 1,
-                                                token_id = 2)
+                                                token_id = 1000)
                                     ])
             ]).run(sender = alice, valid=False)
         ownership_test([bob, alice, admin])
@@ -903,7 +903,7 @@ def add_test(config, is_default = True):
                                     txs = [
                                         sp.record(to_ = alice.address,
                                                 amount = 1,
-                                                token_id = 2)
+                                                token_id = 1000)
                                     ])
             ]).run(sender = alice, valid=False)
         ownership_test([bob, alice, admin])
@@ -914,7 +914,7 @@ def add_test(config, is_default = True):
                                     txs = [
                                         sp.record(to_ = alice.address,
                                                 amount = 1,
-                                                token_id = 2)
+                                                token_id = 1000)
                                     ])
             ]).run(sender = alice, valid=False)
         ownership_test([bob, alice, admin])
@@ -927,9 +927,53 @@ def add_test(config, is_default = True):
                                     txs = [
                                         sp.record(to_ = admin.address,
                                                 amount = 1,
-                                                token_id = 2)
+                                                token_id = 1)
                                     ])
             ]).run(sender = admin, valid=False)
+        ownership_test([bob, alice, admin])
+
+        scenario.h3("Admin tries to force Alice to give a token to Bob")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 1)
+                                    ])
+            ]).run(sender = admin, valid=False)
+        ownership_test([bob, alice, admin])
+
+        scenario.h3("Alice tries to transfer a non-existing token")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = admin.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 1000)
+                                    ])
+            ]).run(sender = alice, valid=False)
+        ownership_test([bob, alice, admin])
+
+        scenario.h3("Admin tries to self-transfer a non-existing token")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = admin.address,
+                                    txs = [
+                                        sp.record(to_ = admin.address,
+                                                amount = 1,
+                                                token_id = 1000)
+                                    ])
+            ]).run(sender = alice, valid=False)
+        ownership_test([bob, alice, admin])
+
+        scenario.h3("Admin tries to steal a non-existing token from Bob")
+        c1.transfer([
+                c1.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = admin.address,
+                                                amount = 1,
+                                                token_id = 1000)
+                                    ])
+            ]).run(sender = alice, valid=False)
         ownership_test([bob, alice, admin])
 
         return
