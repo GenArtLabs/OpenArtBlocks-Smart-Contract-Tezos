@@ -328,7 +328,7 @@ class FA2_core(sp.Contract):
            sp.for tx in transfer.txs:
 
                 sender_verify = (
-                    transfer.from_ == sp.sender |
+                    (transfer.from_ == sp.sender) |
                     self.operator_set.is_member(self.data.operators,
                         transfer.from_,
                         sp.sender,
