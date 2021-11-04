@@ -1070,7 +1070,7 @@ def add_test(config, is_default = True):
             ]).run(sender = alice)
         ownership_test(c1, [bob, alice, admin])
 
-        scenario.h4("Alice sends its token in 0 ammount to someone")
+        scenario.h4("Alice sends its token in 0 amount to someone")
         c1.transfer([
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
@@ -1081,7 +1081,7 @@ def add_test(config, is_default = True):
             ]).run(sender = alice)
         ownership_test(c1, [bob, alice, admin])
 
-        scenario.h4("Alice sends a Bob's token in 0 ammount to someone")
+        scenario.h4("Alice sends a Bob's token in 0 amount to someone")
         c1.transfer([
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
@@ -1094,7 +1094,7 @@ def add_test(config, is_default = True):
 
         scenario.h3("Invalid testcases")
 
-        scenario.h4("Alice tries to send a non-existing token in 0 ammount to someone")
+        scenario.h4("Alice tries to send a non-existing token in 0 amount to someone")
         c1.transfer([
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
@@ -1105,7 +1105,7 @@ def add_test(config, is_default = True):
             ]).run(sender = alice, valid=False)
         ownership_test(c1, [bob, alice, admin])
 
-        scenario.h4("Alice tries to send twice its token (ammount) to someone")
+        scenario.h4("Alice tries to send twice its token (amount) to someone")
         c1.transfer([
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
@@ -1116,7 +1116,7 @@ def add_test(config, is_default = True):
             ]).run(sender = alice, valid=False)
         ownership_test(c1, [bob, alice, admin])
 
-        scenario.h4("Alice tries to send twice its token (ammount) to itself")
+        scenario.h4("Alice tries to send twice its token (amount) to itself")
         c1.transfer([
                 c1.batch_transfer.item(from_ = alice.address,
                                     txs = [
