@@ -1558,7 +1558,7 @@ def add_test(config, is_default = True):
                                                 amount = 1,
                                                 token_id = 0)
                                     ])
-            ]).run(sender = op)
+            ]).run(sender = op, valid=False)
         ownership_test(c3, [alice]*3)
 
         scenario.h3("Alice grants Operator rights on token 0")
