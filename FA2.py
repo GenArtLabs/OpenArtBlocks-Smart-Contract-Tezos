@@ -327,8 +327,14 @@ class FA2_core(sp.Contract):
         sp.for transfer in params:
            sp.for tx in transfer.txs:
 
-                sender_verify = (transfer.from_ == sp.sender)
-                message = self.error_message.not_owner()
+                sender_verify = (
+                    transfer.from_ == sp.sender |
+                    self.operator_set.is_member(self.data.operators,
+                        transfer.from_,
+                        sp.sender,
+                        tx.token_id)
+                )
+                message = self.error_message.not_operator()
 
                 if self.config.allow_self_transfer:
                     sender_verify |= (sp.sender == sp.self_address)
