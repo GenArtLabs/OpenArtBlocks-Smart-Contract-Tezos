@@ -593,20 +593,19 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_lock, 
         metadata_base = {
             "version": config.name # will be changed if using fatoo.
             , "description" : (
-                "This is a didactic reference implementation of FA2,"
-                + " a.k.a. TZIP-012, using SmartPy.\n\n"
-                + "This particular contract uses the configuration named: "
-                + config.name + "."
+                "Blocks on Blocks is an open source abstract generative art collection."
             )
-            , "interfaces": ["TZIP-012", "TZIP-016"]
+            , "interfaces": ["TZIP-012", "TZIP-016", "TZIP-021"]
             , "authors": [
-                "Seb Mondet <https://seb.mondet.org>"
+                "Achiru <https://github.com/pop123123123>",
+                "AntOnChain <https://github.com/antbrl>",
+                "Wakob'Hash <https://github.com/nbusser>",
             ]
-            , "homepage": "https://gitlab.com/smondet/fa2-smartpy"
+            , "homepage": "https://gitlab.com/smondet/fa2-smartpy"#TODO
             , "views": list_of_views
             , "source": {
                 "tools": ["SmartPy"]
-                , "location": "https://gitlab.com/smondet/fa2-smartpy.git"
+                , "location": "https://gitlab.com/smondet/fa2-smartpy.git"#TODO
             }
             , "permissions": {
                 "operator":
