@@ -1483,24 +1483,6 @@ def add_test(config, is_default = True):
             ]).run(sender = op, valid=False)
         ownership_test(c1, [alice]*3)
 
-        scenario.h3("Admin tries to grant Operator rights on token 0 and 2")
-
-        c1.update_operators([
-                sp.variant("add_operator", c1.operator_param.make(
-                    owner = alice.address,
-                    operator = op.address,
-                    token_id = 0))
-            ]).run(sender = admin, valid=False)
-
-        scenario.h3("Bob tries to grant Operator rights on token 0 and 2")
-
-        c1.update_operators([
-                sp.variant("add_operator", c1.operator_param.make(
-                    owner = alice.address,
-                    operator = op.address,
-                    token_id = 0))
-            ]).run(sender = bob, valid=False)
-
         scenario.h3("Alice grants Operator rights on token 0 and 2")
 
         c1.update_operators([
@@ -1621,11 +1603,147 @@ def add_test(config, is_default = True):
             ]).run(sender = op, valid=False)
         ownership_test(c1, [alice]*3)
 
+        scenario.h2("Naming operator on balance 0 token")
+
+        scenario.h3("Bob names operator for token 0 he doesn't possess yet")
+
+        c1.update_operators([
+                sp.variant("add_operator", c1.operator_param.make(
+                    owner = alice.address,
+                    operator = op.address,
+                    token_id = 0))
+            ]).run(sender = bob)
+
+        scenario.h3("Alice sends token 0 to Bob. Operator then has not right on this token.")
+
+        c1.transfer([
+        c1.batch_transfer.item(from_ = alice.address,
+                            txs = [
+                                sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = alice)
+        ownership_test(c1, [bob] + [alice]*2)
+
+        c1.transfer([
+        c1.batch_transfer.item(from_ = bob.address,
+                            txs = [
+                                sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = op, valid=False)
+        ownership_test(c1, [bob] + [alice]*2)
+
+        scenario.p("Bob sends back this token to Alice")
+
+        c1.transfer([
+        c1.batch_transfer.item(from_ = bob.address,
+                            txs = [
+                                sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = bob)
+        ownership_test(c1, [alice]*3)
+
+        scenario.h2("Granting in the name of someone else")
+
+        scenario.h3("Admin tries to grant Operator rights on Alice's token 0")
+
+        c1.update_operators([
+                sp.variant("add_operator", c1.operator_param.make(
+                    owner = alice.address,
+                    operator = op.address,
+                    token_id = 0))
+            ]).run(sender = admin, valid=False)
+
+        scenario.h3("Bob tries to grant Operator rights on Alice's token 0")
+
+        c1.update_operators([
+                sp.variant("add_operator", c1.operator_param.make(
+                    owner = alice.address,
+                    operator = op.address,
+                    token_id = 0))
+            ]).run(sender = bob, valid=False)
+
+        scenario.h3("Alice itself cannot fake token owner in update_operators")
+
+        c1.update_operators([
+                sp.variant("add_operator", c1.operator_param.make(
+                    owner = admin.address,
+                    operator = op.address,
+                    token_id = 0))
+            ]).run(sender = alice, valid=False)
+
         scenario.h2("Multiple operators tests")
 
-        op1 = sp.test_account("Operator1")
+        op2 = sp.test_account("Operator#2")
 
-        # Associativité opérateurs
+        scenario.p("Operator#1 mints a token")
+
+        c1.mint(1).run(sender = op, amount = sp.mutez(1000000))
+        ownership_test(c1, [alice]*3 + [op])
+
+        scenario.p("Alice names Operator#1 as operator for token 0")
+
+        c1.update_operators([
+                sp.variant("add_operator", c1.operator_param.make(
+                    owner = alice.address,
+                    operator = op.address,
+                    token_id = 0))
+            ]).run(sender = alice)
+
+        scenario.p("Operator#1 names Operator#2 as operator for token 3")
+
+        c1.update_operators([
+                sp.variant("add_operator", c1.operator_param.make(
+                    owner = op2.address,
+                    operator = op.address,
+                    token_id = 3))
+            ]).run(sender = op)
+
+        scenario.h3("No operator transitivity: Operator#2 tries to smuggle token 0 of Alice via Operator#1")
+
+        c1.transfer([
+        c1.batch_transfer.item(from_ = alice.address,
+                            txs = [
+                                sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = op2, valid=False)
+        ownership_test(c1, [alice]*3)
+
+        scenario.h3("Operator#1 cannot name Operator#2 as operator on token 0")
+
+        c1.update_operators([
+                sp.variant("add_operator", c1.operator_param.make(
+                    owner = alice.address,
+                    operator = op2.address,
+                    token_id = 0))
+            ]).run(sender = op, valid=False)
+
+        scenario.h3("Alice can name two operators on the same token")
+
+        c1.update_operators([
+                sp.variant("add_operator", c1.operator_param.make(
+                    owner = alice.address,
+                    operator = op.address,
+                    token_id = 1))
+                , sp.variant("add_operator", c1.operator_param.make(
+                    owner = alice.address,
+                    operator = op2.address,
+                    token_id = 1))
+            ]).run(sender = alice)
+
+
+        #     c1.update_operators([
+        # sp.variant("remove_operator", c1.operator_param.make(
+        #     owner = alice.address,
+        #     operator = op1.address,
+        #     token_id = 0)),
 
         return
 
