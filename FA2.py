@@ -914,6 +914,12 @@ def add_test(config, is_default = True):
         c1.mint(1).run(sender = admin, amount = sp.mutez(config.price))
         scenario.verify(c1.data.ledger[1] == admin.address)
 
+        scenario.h2("Negative minting")
+        scenario.h3("Mint -1 tokens from non-admin (KO)")
+        c1.mint(-1).run(sender = alice, amount = sp.mutez(0), valid = False)
+        scenario.h3("Mint -1 tokens from admin (KO)")
+        c1.mint(-1).run(sender = admin, amount = sp.mutez(0), valid = False)
+
         scenario.h2("Zero minting")
         scenario.h3("Mint 0 tokens from non-admin (KO)")
         c1.mint(0).run(sender = alice, amount = sp.mutez(0), valid = False)
