@@ -1431,6 +1431,170 @@ def add_test(config, is_default = True):
         ownership_test(c2, [bob] + [admin] + [alice]*2 + [admin]*2)
         scenario.p("Transaction has been cancelled")
 
+        scenario.h2("Operator related tests")
+        
+        config.max_editions = 10000
+        c3 = FA2(config = config,
+            metadata = sp.utils.metadata_of_url("https://example.com"),
+            admin = admin.address)
+
+        scenario += c3
+
+        scenario.p("Creation of two operators")
+        op = sp.test_account("Operator")
+        op1 = sp.test_account("Operator1")
+
+        scenario.p("Alice mints 3 tokens")
+        c3.mint(3).run(sender = alice, amount = sp.mutez(3000000))
+
+        scenario.h3("Operator tries to transfer Alice's token before being permitted to")
+
+        c3.transfer([
+                c3.batch_transfer.item(from_ = alice.address,
+                                    txs = [
+                                        sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = op, valid=False)
+        ownership_test(c3, [alice]*3)
+
+        scenario.h3("Admin tries to grant Operator rights on token 0 and 2")
+
+        c3.update_operators([
+                sp.variant("add_operator", c3.operator_param.make(
+                    owner = alice.address,
+                    operator = op.address,
+                    token_id = 0))
+            ]).run(sender = admin, valid=False)
+
+        scenario.h3("Bob tries to grant Operator rights on token 0 and 2")
+
+        c3.update_operators([
+                sp.variant("add_operator", c3.operator_param.make(
+                    owner = alice.address,
+                    operator = op.address,
+                    token_id = 0))
+            ]).run(sender = bob, valid=False)
+
+        scenario.h3("Alice grants Operator rights on token 0 and 2")
+
+        c3.update_operators([
+                sp.variant("add_operator", c3.operator_param.make(
+                    owner = alice.address,
+                    operator = op.address,
+                    token_id = 0)),
+                sp.variant("add_operator", c3.operator_param.make(
+                    owner = alice.address,
+                    operator = op.address,
+                    token_id = 2))
+            ]).run(sender = alice)
+
+        scenario.h3("Operator transfers token 0 from Alice to Bob")
+
+        c3.transfer([
+        c3.batch_transfer.item(from_ = alice.address,
+                            txs = [
+                                sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = op)
+        ownership_test(c3, [bob] + [alice]*2)
+
+        scenario.h3("Operator tries to transfer token 0 from Bob to Alice")
+
+        c3.transfer([
+        c3.batch_transfer.item(from_ = bob.address,
+                            txs = [
+                                sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = op, valid=False)
+        ownership_test(c3, [bob] + [alice]*2)
+
+        scenario.h3("Alice transfers token 2 to Bob")
+
+        c3.transfer([
+        c3.batch_transfer.item(from_ = alice.address,
+                            txs = [
+                                sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 2)
+                                    ])
+            ]).run(sender = alice)
+        ownership_test(c3, [bob] + [alice] + [bob])
+
+        scenario.h3("Operator is too late and tries to transfer token 2 to Admin")
+
+        c3.transfer([
+        c3.batch_transfer.item(from_ = alice.address,
+                            txs = [
+                                sp.record(to_ = admin.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = op, valid=False)
+        ownership_test(c3, [bob] + [alice]*2)
+
+        scenario.h3("Bob sends back token 0 to Alice")
+
+        c3.transfer([
+        c3.batch_transfer.item(from_ = bob.address,
+                            txs = [
+                                sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = bob)
+        ownership_test(c3, [alice]*3)
+
+        scenario.h3("Operator tries to transfer again token 0 from Alice to Bob. He has no rights to do that")
+
+        c3.transfer([
+        c3.batch_transfer.item(from_ = alice.address,
+                            txs = [
+                                sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = op)
+        ownership_test(c3, [alice]*3)
+
+        scenario.h3("Alice grants Operator rights on token 0")
+
+        c3.update_operators([
+                sp.variant("add_operator", c3.operator_param.make(
+                    owner = alice.address,
+                    operator = op.address,
+                    token_id = 0))
+            ]).run(sender = alice)
+
+        scenario.h3("Alice transfers token 0 to itself")
+
+        c3.transfer([
+        c3.batch_transfer.item(from_ = alice.address,
+                            txs = [
+                                sp.record(to_ = alice.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = alice)
+        ownership_test(c3, [alice]*3)
+
+        scenario.h3("Operator has no rights to token 0 anymore")
+
+        c3.transfer([
+        c3.batch_transfer.item(from_ = alice.address,
+                            txs = [
+                                sp.record(to_ = bob.address,
+                                                amount = 1,
+                                                token_id = 0)
+                                    ])
+            ]).run(sender = op, valid=False)
+        ownership_test(c3, [alice]*3)
+
         return
 
         tok0_md = FA2.make_metadata(
