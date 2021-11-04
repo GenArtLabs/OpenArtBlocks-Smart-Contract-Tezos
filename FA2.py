@@ -1023,7 +1023,6 @@ def add_test(config, is_default = True):
             if ledgers is None:
                 ledgers = ["Alice", "Robert", "Administrator"]
                 ledgers = list(map(lambda l: sp.test_account(l), ledgers))
-            scenario.p("Check initial ownership")
             for i in range(len(ledgers)):
                 scenario.verify(contract.data.ledger[i] == ledgers[i].address)
         ownership_test(c1)
@@ -1594,6 +1593,8 @@ def add_test(config, is_default = True):
                                     ])
             ]).run(sender = op, valid=False)
         ownership_test(c3, [alice]*3)
+
+        # Associativité opérateurs 
 
         return
 
