@@ -348,7 +348,7 @@ class FA2_core(sp.Contract):
                 sp.if (tx.amount == 1):
 
                     sp.verify(
-                        (self.data.ledger[tx.token_id] == sp.sender),
+                        (self.data.ledger[tx.token_id] == transfer.from_),
                         message = self.error_message.insufficient_balance())
                     self.data.ledger[tx.token_id] = tx.to_
                 sp.else:
