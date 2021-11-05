@@ -722,6 +722,11 @@ def tests_all_tokens():
 def tests_is_operator():
     run_tests_is_operator(environment_config())
 
+@sp.add_test(name = "Tests token metadata", is_default=True)
+def tests_token_metadata():
+    run_token_metadata(environment_config())
+
+
 ## ## Standard “main”
 ##
 ## This specific main uses the relative new feature of non-default tests
