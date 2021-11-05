@@ -53,6 +53,21 @@ def run_tests_operator(config):
 
     #-----------------------------------------------------
     scenario.h2((
+        "Alice grants itself as operator on a token"
+    ))
+
+    possessors = [alice]
+    contract = create_new_contract(config, admin, scenario, possessors)
+
+    contract.update_operators([
+        sp.variant("add_operator", contract.operator_param.make(
+            owner=alice.address,
+            operator=alice.address,
+            token_id=0))
+    ]).run(sender=alice)
+
+    #-----------------------------------------------------
+    scenario.h2((
         "Alice grants Operator rights on a token but sends it before operator could"
     ))
 
