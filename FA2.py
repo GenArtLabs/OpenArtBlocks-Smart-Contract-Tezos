@@ -273,6 +273,7 @@ def mutez_transfer(contract, params):
     sp.verify(sp.sender == contract.data.administrator)
     sp.set_type(params.destination, sp.TAddress)
     sp.set_type(params.amount, sp.TMutez)
+    sp.verify(params.amount <= sp.balance)
     sp.send(params.destination, params.amount)
 ##
 ## The `FA2` class builds a contract according to an `FA2_config` and an
