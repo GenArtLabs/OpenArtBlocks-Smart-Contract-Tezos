@@ -152,7 +152,7 @@ def run_tests_remove_operator(config):
             owner=alice.address,
             operator=op.address,
             token_id=0))
-    ] + [
+    ,
         sp.variant("add_operator", contract.operator_param.make(
             owner=alice.address,
             operator=op.address,
@@ -177,7 +177,7 @@ def run_tests_remove_operator(config):
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=0)
-                               ] + [
+                               ,
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=1)
@@ -261,7 +261,7 @@ def run_tests_remove_operator(config):
             owner=alice.address,
             operator=op.address,
             token_id=0))
-    ], [
+    ,
         sp.variant("add_operator", contract.operator_param.make(
             owner=alice.address,
             operator=op2.address,
@@ -304,7 +304,7 @@ def run_tests_remove_operator(config):
             owner=alice.address,
             operator=op.address,
             token_id=0))
-    ], [
+    ,
         sp.variant("remove_operator", contract.operator_param.make(
             owner=alice.address,
             operator=op.address,
@@ -337,7 +337,7 @@ def run_tests_remove_operator(config):
             owner=alice.address,
             operator=op.address,
             token_id=0))
-    ], [
+    ,
         sp.variant("add_operator", contract.operator_param.make(
             owner=alice.address,
             operator=op.address,
@@ -373,7 +373,7 @@ def run_tests_remove_operator(config):
             owner=bob.address,
             operator=op.address,
             token_id=0))
-    ], [
+    ,
         sp.variant("add_operator", contract.operator_param.make(
             owner=alice.address,
             operator=op.address,

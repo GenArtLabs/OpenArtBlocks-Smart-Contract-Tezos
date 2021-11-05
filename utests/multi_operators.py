@@ -116,7 +116,7 @@ def run_tests_multi_operators(config):
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=0)
-                               ] + [
+                               ,
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=1)

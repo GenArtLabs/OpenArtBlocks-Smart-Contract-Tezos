@@ -265,7 +265,7 @@ def run_tests_transfer(config):
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=0)
-                               ] + [
+                               ,
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=1)
@@ -282,7 +282,7 @@ def run_tests_transfer(config):
                                    sp.record(to_=alice.address,
                                              amount=1,
                                              token_id=2)
-                               ] + [
+                               ,
                                    sp.record(to_=alice.address,
                                              amount=1,
                                              token_id=2)
@@ -297,7 +297,7 @@ def run_tests_transfer(config):
                                    sp.record(to_=alice.address,
                                              amount=1,
                                              token_id=3)
-                               ] + [
+                               ,
                                    sp.record(to_=admin.address,
                                              amount=1,
                                              token_id=4)
@@ -314,11 +314,11 @@ def run_tests_transfer(config):
                                    sp.record(to_=admin.address,
                                              amount=1,
                                              token_id=1)
-                               ] + [
+                               ,
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=0)
-                               ] + [
+                               ,
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=0)
@@ -334,7 +334,7 @@ def run_tests_transfer(config):
                                    sp.record(to_=alice.address,
                                              amount=1,
                                              token_id=2)
-                               ] + [
+                               ,
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=2)
@@ -350,7 +350,7 @@ def run_tests_transfer(config):
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=2)
-                               ] + [
+                               ,
                                    sp.record(to_=alice.address,
                                              amount=1,
                                              token_id=2)
@@ -368,7 +368,7 @@ def run_tests_transfer(config):
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=2)
-                               ] + [
+                               ,
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=1000)
@@ -384,7 +384,7 @@ def run_tests_transfer(config):
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=1000)
-                               ] + [
+                               ,
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=1001)
@@ -399,7 +399,7 @@ def run_tests_transfer(config):
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=2)
-                               ] + [
+                               ,
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=2)
@@ -415,7 +415,7 @@ def run_tests_transfer(config):
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=2)
-                               ] + [
+                               ,
                                    sp.record(to_=admin.address,
                                              amount=1,
                                              token_id=2)
@@ -431,7 +431,7 @@ def run_tests_transfer(config):
                                    sp.record(to_=admin.address,
                                              amount=1,
                                              token_id=2)
-                               ] + [
+                               ,
                                    sp.record(to_=admin.address,
                                              amount=1,
                                              token_id=2)

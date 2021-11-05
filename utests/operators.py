@@ -4,7 +4,7 @@ def run_tests_operator(config):
     admin, [alice, bob] = get_addresses()
 
     config.max_editions = 10000
-    
+
     scenario.h1("Tests operator")
 
     scenario.table_of_contents()
@@ -269,7 +269,7 @@ def run_tests_operator(config):
 
     possessors = []
     contract = create_new_contract(config, admin, scenario, possessors)
-    
+
     contract.update_operators([
         sp.variant("add_operator", contract.operator_param.make(
             owner=admin.address,
@@ -326,7 +326,7 @@ def run_tests_operator(config):
             owner=alice.address,
             operator=op.address,
             token_id=0))
-    ], [
+    ,
         sp.variant("add_operator", contract.operator_param.make(
             owner=bob.address,
             operator=op.address,
