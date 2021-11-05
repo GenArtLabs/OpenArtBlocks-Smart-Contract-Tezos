@@ -727,6 +727,9 @@ def tests_get_balance():
 def tests_count_tokens():
     run_tests_count_tokens(environment_config())
 
+@sp.add_test(name = "Tests does token exist", is_default=True)
+def tests_does_token_exist():
+    run_tests_does_token_exist(environment_config())
 ## ## Standard “main”
 ##
 ## This specific main uses the relative new feature of non-default tests
