@@ -24,7 +24,7 @@ def run_tests_is_operator(config):
     is_op = contract.is_operator(
         sp.record(owner=alice.address, operator=alice.address, token_id=0)
     )
-    scenario.verify(is_op == True)
+    scenario.verify(is_op == False)
 
     #-----------------------------------------------------
     scenario.h2("Existing token, no owner, no operator")
@@ -42,7 +42,7 @@ def run_tests_is_operator(config):
     is_op = contract.is_operator(
         sp.record(owner=alice.address, operator=alice.address, token_id=0)
     )
-    scenario.verify(is_op == True)
+    scenario.verify(is_op == False)
 
     #-----------------------------------------------------
     scenario.h2("Non-existing token, operator")
