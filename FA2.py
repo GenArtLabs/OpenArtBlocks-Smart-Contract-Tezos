@@ -719,6 +719,10 @@ def tests_set_administrator():
 def tests_mutez_transfer():
     run_tests_mutez_transfer(environment_config())
 
+@sp.add_test(name = "Tests get balance", is_default=True)
+def tests_get_balance():
+    run_tests_get_balance(environment_config())
+
 ## ## Standard “main”
 ##
 ## This specific main uses the relative new feature of non-default tests
