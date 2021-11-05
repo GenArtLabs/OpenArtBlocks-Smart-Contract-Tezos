@@ -275,7 +275,7 @@ def run_tests_operator(config):
             owner=admin.address,
             operator=op.address,
             token_id=0))
-    ]).run(sender=admin, valid=False)
+    ]).run(sender=admin)
 
     #-----------------------------------------------------
     scenario.h2("Granting in the name of someone else")

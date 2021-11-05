@@ -48,7 +48,7 @@ def run_tests_remove_operator(config):
             owner=alice.address,
             operator=op.address,
             token_id=1000)),
-    ]).run(sender=alice, valid=False)
+    ]).run(sender=alice)
 
     #-----------------------------------------------------
     scenario.h2("Removing someone else non-added operator")
