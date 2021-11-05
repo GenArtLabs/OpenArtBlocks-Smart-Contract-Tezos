@@ -1031,6 +1031,10 @@ def tests_multi_operators():
 def tests_remove_operator():
     run_tests_remove_operator(environment_config())
 
+@sp.add_test(name = "Tests set admin", is_default=True)
+def tests_set_administrator():
+    run_tests_set_administrator(environment_config())
+
 
 ## ## Standard “main”
 ##
