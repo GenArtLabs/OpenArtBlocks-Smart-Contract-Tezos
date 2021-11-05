@@ -578,7 +578,7 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_lock, 
         metadata_base = {
             "version": config.name # will be changed if using fatoo.
             , "description" : (
-                "Blocks on Blocks is an open source abstract generative art collection."
+                "Blocks on Blocks is an abstract NFT collection based on an open source FA2 implementation for generative art."
             )
             , "interfaces": ["TZIP-012", "TZIP-016", "TZIP-021"]
             , "authors": [
@@ -586,12 +586,8 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_lock, 
                 "AntOnChain <https://github.com/antbrl>",
                 "Wakob'Hash <https://github.com/nbusser>",
             ]
-            , "homepage": "https://gitlab.com/smondet/fa2-smartpy"#TODO
+            , "homepage": "https://github.com/GenArtLabs"
             , "views": list_of_views
-            , "source": {
-                "tools": ["SmartPy"]
-                , "location": "https://gitlab.com/smondet/fa2-smartpy.git"#TODO
-            }
             , "permissions": {
                 "operator":
                 "owner-or-operator-transfer" if config.support_operator else "owner-transfer"
