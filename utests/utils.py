@@ -1,3 +1,15 @@
+def create_new_contract(config, admin, scenario, ledgers):
+    contract = FA2(config=config, 
+    metadata=sp.utils.metadata_of_url("https://example.com"),
+    admin=admin.address)
+
+    scenario += contract
+
+    for i in range(len(ledgers)):
+        contract.mint(1).run(sender=ledgers[i], amount=sp.mutez(1000000))
+
+    return contract
+
 def get_addresses():
     # sp.test_account generates ED25519 key-pairs deterministically:
     admin = sp.test_account("Administrator")
