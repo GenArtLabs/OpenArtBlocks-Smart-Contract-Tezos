@@ -723,6 +723,10 @@ def tests_mutez_transfer():
 def tests_get_balance():
     run_tests_get_balance(environment_config())
 
+@sp.add_test(name = "Tests count token", is_default=True)
+def tests_count_tokens():
+    run_tests_count_tokens(environment_config())
+
 ## ## Standard “main”
 ##
 ## This specific main uses the relative new feature of non-default tests
