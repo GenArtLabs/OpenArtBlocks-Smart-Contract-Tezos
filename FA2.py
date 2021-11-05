@@ -718,6 +718,10 @@ def tests_does_token_exist():
 def tests_all_tokens():
     run_tests_all_tokens(environment_config())
 
+@sp.add_test(name = "Tests is operator", is_default=True)
+def tests_is_operator():
+    run_tests_is_operator(environment_config())
+
 ## ## Standard “main”
 ##
 ## This specific main uses the relative new feature of non-default tests
