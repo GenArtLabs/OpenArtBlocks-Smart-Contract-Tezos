@@ -714,6 +714,9 @@ def tests_remove_operator():
 def tests_set_administrator():
     run_tests_set_administrator(environment_config())
 
+@sp.add_test(name = "Tests mutez transfer", is_default=True)
+def tests_mutez_transfer():
+    run_tests_mutez_transfer(environment_config())
 
 ## ## Standard “main”
 ##
