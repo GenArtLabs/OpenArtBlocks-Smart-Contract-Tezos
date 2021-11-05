@@ -1024,8 +1024,13 @@ def tests_operator():
     run_tests_operator(environment_config())
 
 @sp.add_test(name = "tzip12 tests multi operators", is_default=True)
-def run_tests_multi_operators():
+def tests_multi_operators():
     run_tests_multi_operators(environment_config())
+
+@sp.add_test(name = "tzip12 tests remove operators", is_default=True)
+def tests_remove_operator():
+    run_tests_remove_operator(environment_config())
+
 
 ## ## Standard “main”
 ##

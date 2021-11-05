@@ -182,7 +182,42 @@ def run_tests_operator(config):
     ]).run(sender=alice)
     ownership_test(scenario, contract, possessors)
 
-    scenario.p("Operator still has rights on token 0")
+    scenario.p("Operator still has rights on Alice's token 0")
+    contract.transfer([
+        contract.batch_transfer.item(from_=alice.address,
+                               txs=[
+                                   sp.record(to_=bob.address, amount=1, token_id=0)
+                               ])
+    ]).run(sender=op)
+    possessors[0] = bob
+    ownership_test(scenario, contract, possessors)
+
+     #-----------------------------------------------------
+    scenario.h2("Token loopback from operator does not cancels operator rights")
+
+    possessors = [alice]
+    contract = create_new_contract(config, admin, scenario, possessors)
+
+    scenario.p("Alice grants Operator rights on token 0")
+
+    contract.update_operators([
+        sp.variant("add_operator", contract.operator_param.make(
+            owner=alice.address,
+            operator=op.address,
+            token_id=0))
+    ]).run(sender=alice)
+
+    scenario.p("Operator transfers token 0 to Alice")
+
+    contract.transfer([
+        contract.batch_transfer.item(from_=alice.address,
+                               txs=[
+                                   sp.record(to_=alice.address, amount=1, token_id=0)
+                               ])
+    ]).run(sender=op)
+    ownership_test(scenario, contract, possessors)
+
+    scenario.p("Operator still has rights on Alice's token 0")
     contract.transfer([
         contract.batch_transfer.item(from_=alice.address,
                                txs=[
@@ -274,3 +309,38 @@ def run_tests_operator(config):
             operator=op.address,
             token_id=0))
     ]).run(sender=alice, valid=False)
+
+    #-----------------------------------------------------
+    scenario.h2((
+        "If one of sub command of update_operators is invalid, whole transaction is canceled\n"
+        "Good add, wrong add"
+    ))
+
+    possessors = [alice]
+    contract = create_new_contract(config, admin, scenario, possessors)
+
+    scenario.h3("Alice makes invalid add request")
+
+    contract.update_operators([
+        sp.variant("add_operator", contract.operator_param.make(
+            owner=alice.address,
+            operator=op.address,
+            token_id=0))
+    ], [
+        sp.variant("add_operator", contract.operator_param.make(
+            owner=bob.address,
+            operator=op.address,
+            token_id=0))
+    ]).run(sender=alice, valid=False)
+
+    scenario.h3("Operator#1 should not be able to smuggle Alice's token 0")
+
+    contract.transfer([
+        contract.batch_transfer.item(from_=alice.address,
+                               txs=[
+                                   sp.record(to_=bob.address,
+                                             amount=1,
+                                             token_id=0)
+                               ])
+    ]).run(sender=op, valid=False)
+    ownership_test(scenario, contract, possessors)
