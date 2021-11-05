@@ -33,7 +33,6 @@ class FA2_config:
                  readable                           = True,
                  force_layouts                      = True,
                  support_operator                   = True,
-                 store_total_supply                 = True,
                  allow_self_transfer                = False,
                  price                              = 1000000,
                  max_editions                       = 2,
@@ -76,10 +75,6 @@ class FA2_config:
         # definitely a use-case for having them completely empty (saving
         # storage and gas when `support_operator` is `False).
 
-        self.store_total_supply = store_total_supply
-        # Whether to store the total-supply for each token (next to
-        # the token-metadata).
-
         self.add_mutez_transfer = True
         # Add an entry point for the administrator to transfer tez potentially
         # in the contract's balance.
@@ -97,8 +92,6 @@ class FA2_config:
             name += "-no_layout"
         if not support_operator:
             name += "-no_ops"
-        if not store_total_supply:
-            name += "-no_totsup"
         if allow_self_transfer:
             name += "-self_transfer"
         self.name = name
@@ -316,11 +309,6 @@ class FA2_core(sp.Contract):
             base_uri = sp.utils.bytes_of_string(self.config.base_uri),
             **extra_storage
         )
-
-        if self.config.store_total_supply:
-            self.update_initial_storage(
-                total_supply = self.config.my_map(tkey = sp.TNat, tvalue = sp.TNat),
-            )
 
     @sp.entry_point
     def transfer(self, params):
@@ -553,11 +541,8 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_lock, 
 
     @sp.offchain_view(pure = True)
     def total_supply(self, tok):
-        if self.config.store_total_supply:
-            sp.result(self.data.total_supply[tok])
-        else:
-            sp.set_type(tok, sp.TNat)
-            sp.result("total-supply not supported")
+        sp.verify(tok < self.data.max_editions, message = self.error_message.token_undefined())
+        sp.result(sp.nat(1))
 
     @sp.offchain_view(pure = True)
     def is_operator(self, query):
@@ -584,10 +569,9 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_lock, 
             , self.count_tokens
             , self.all_tokens
             , self.is_operator
+            , self.total_supply
         ]
 
-        if config.store_total_supply:
-            list_of_views = list_of_views + [self.total_supply]
         self.set_token_metadata_view()
         list_of_views = list_of_views + [self.token_metadata]
 
@@ -673,7 +657,6 @@ def environment_config():
         readable = global_parameter("readable", True),
         force_layouts = global_parameter("force_layouts", True),
         support_operator = global_parameter("support_operator", True),
-        store_total_supply = global_parameter("store_total_supply", False),
         allow_self_transfer = global_parameter("allow_self_transfer", False),
         max_editions = global_parameter("max_editions", 2),
     )
