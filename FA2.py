@@ -498,9 +498,9 @@ class FA2_token_metadata(FA2_core):
             token_hash = self.data.hashes[token_id]
 
             metadata = FA2.make_metadata(
-                name = "Tezticule",
+                name = "Blocks on Blocks",
                 decimals = 0,
-                symbol= "TIK",
+                symbol= "BoB",
                 token_hash = token_hash,
                 uri = self.data.base_uri + bytes_of_nat(token_id)
             )
