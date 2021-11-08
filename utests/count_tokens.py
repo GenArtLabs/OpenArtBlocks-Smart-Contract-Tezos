@@ -33,6 +33,7 @@ def run_tests_count_tokens(config):
 
     #-----------------------------------------------------
     scenario.h2("Mint fails are not counted as tokens")
+    config.max_editions = 2
     contract = create_new_contract(config, admin, scenario, [alice, bob])
 
     count = contract.count_tokens()

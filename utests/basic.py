@@ -5,6 +5,8 @@ def run_basic_test(config):
 
     admin, [alice, bob] = get_addresses()
 
+    config.max_editions = 2
+
     # Let's display the accounts:
     scenario.h2("Accounts")
     scenario.show([admin, alice, bob])
