@@ -726,6 +726,10 @@ def tests_is_operator():
 def tests_token_metadata():
     run_token_metadata(environment_config())
 
+@sp.add_test(name = "Tests set mint parameters", is_default=True)
+def tests_set_mint_parameters():
+    run_tests_set_mint_parameters(environment_config())
+
 
 
 def add_test(config, is_default = True):
