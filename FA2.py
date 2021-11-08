@@ -29,7 +29,6 @@ def bytes_of_nat(params):
 class FA2_config:
     def __init__(self,
                  debug_mode                         = False,
-                 non_fungible                       = True,
                  readable                           = True,
                  force_layouts                      = True,
                  support_operator                   = True,
@@ -50,10 +49,6 @@ class FA2_config:
         self.price = price
         self.max_editions = max_editions
         self.base_uri = base_uri
-
-        self.non_fungible = non_fungible
-        # Enforce the non-fungibility of the tokens, i.e. the fact
-        # that total supply has to be 1.
 
         self.readable = readable
         # The `readable` option is a legacy setting that we keep around
@@ -84,8 +79,6 @@ class FA2_config:
         name = "FA2"
         if debug_mode:
             name += "-debug"
-        if non_fungible:
-            name += "-nft"
         if not readable:
             name += "-no_readable"
         if not force_layouts:
@@ -119,7 +112,8 @@ class Error_message:
     def not_admin_or_operator(self): return self.make("NOT_ADMIN_OR_OPERATOR")
     def paused(self):                return self.make("PAUSED")
     def locked(self):                return self.make("LOCKED")
-    def bad_amount(self):           return self.make("BAD_QUANTITY")
+    def bad_amount(self):            return self.make("BAD_QUANTITY")
+    def sale_started(self):          return self.make("SALE_STARTED")
 
 ## The current type for a batched transfer in the specification is as
 ## follows:
@@ -303,7 +297,7 @@ class FA2_core(sp.Contract):
             operators = self.operator_set.make(),
             all_tokens = self.token_id_set.empty(),
             metadata = metadata,
-            price = self.config.price,
+            price = sp.mutez(self.config.price),
             max_editions = self.config.max_editions,
             script = sp.string(""),
             base_uri = sp.utils.bytes_of_string(self.config.base_uri),
@@ -406,6 +400,19 @@ class FA2_core(sp.Contract):
         else:
             sp.failwith(self.error_message.operators_unsupported())
 
+    @sp.entry_point
+    def set_mint_parameters(self, params):
+        sp.verify(self.is_administrator(sp.sender), message = self.error_message.not_admin())
+        sp.verify(self.data.all_tokens <= 1, message = self.error_message.sale_started())
+        sp.set_type(
+            params, sp.TRecord(
+                price = sp.TMutez,
+                max_editions = sp.TNat
+            ).layout(("price", "max_editions")))
+        sp.verify(self.data.all_tokens <= params.max_editions, message = self.error_message.bad_amount())
+        self.data.max_editions = params.max_editions
+        self.data.price = params.price
+
     # this is not part of the standard but can be supported through inheritance.
     def is_paused(self):
         return sp.bool(False)
@@ -450,13 +457,13 @@ class FA2_mint(FA2_core):
         sp.verify(~ self.is_paused(), message = self.error_message.paused())
 
         nat_amount = sp.as_nat(amount, message = self.error_message.bad_amount())
-        sp.verify(sp.amount == sp.mul(sp.mutez(self.config.price), nat_amount), message = self.error_message.bad_value())
-        sp.verify(self.data.all_tokens + nat_amount <= self.config.max_editions, message = self.error_message.max_editions_reached())
+        sp.verify(sp.amount == sp.mul(self.data.price, nat_amount), message = self.error_message.bad_value())
+        sp.verify(self.data.all_tokens + nat_amount <= self.data.max_editions, message = self.error_message.max_editions_reached())
 
         i = sp.compute(amount)
         sp.while i > 0:
             token_id = sp.compute(self.data.all_tokens)
-            sp.verify(token_id < self.config.max_editions, message = self.error_message.max_editions_reached())
+            sp.verify(token_id < self.data.max_editions, message = self.error_message.max_editions_reached())
 
             token_hash = sp.keccak(sp.pack(sp.record(now=sp.now, s=sp.sender, tid=token_id)))
 
@@ -500,7 +507,7 @@ class FA2_token_metadata(FA2_core):
             metadata = FA2.make_metadata(
                 name = "Blocks on Blocks",
                 decimals = 0,
-                symbol= "BoB",
+                symbol= "BOB",
                 token_hash = token_hash,
                 uri = self.data.base_uri + bytes_of_nat(token_id)
             )
@@ -594,10 +601,6 @@ class FA2(FA2_token_metadata, FA2_mint, FA2_administrator, FA2_pause, FA2_lock, 
                 , "receiver": "owner-no-hook"
                 , "sender": "owner-no-hook"
             }
-            , "fa2-smartpy": {
-                "configuration" :
-                dict([(k, getattr(config, k)) for k in dir(config) if "__" not in k and k != 'my_map'])
-            }
         }
         self.init_metadata("metadata_base", metadata_base)
         FA2_core.__init__(self, config, metadata, paused = False, locked = False, administrator = admin)
@@ -649,12 +652,13 @@ def global_parameter(env_var, default):
 def environment_config():
     return FA2_config(
         debug_mode = global_parameter("debug_mode", False),
-        non_fungible = global_parameter("non_fungible", False),
         readable = global_parameter("readable", True),
         force_layouts = global_parameter("force_layouts", True),
         support_operator = global_parameter("support_operator", True),
         allow_self_transfer = global_parameter("allow_self_transfer", False),
-        max_editions = global_parameter("max_editions", 2),
+        max_editions = global_parameter("max_editions", 4096),
+        price = global_parameter("price", 1000000),
+        base_uri = global_parameter("base_uri", "https://blocks-on-blocks.herokuapp.com/api/"),
     )
 
 
@@ -723,11 +727,50 @@ def tests_token_metadata():
     run_token_metadata(environment_config())
 
 
+
+def add_test(config, is_default = True):
+    @sp.add_test(name = config.name, is_default = is_default)
+    def test():
+        scenario = sp.test_scenario()
+        scenario.h1("FA2 Contract Name: " + config.name)
+        scenario.table_of_contents()
+        # sp.test_account generates ED25519 key-pairs deterministically:
+        admin = sp.test_account("Administrator")
+        alice = sp.test_account("Alice")
+        bob   = sp.test_account("Robert")
+        scenario.show([admin, alice, bob])
+        c1 = FA2(config = config,
+                    metadata = sp.utils.metadata_of_url("https://example.com"),
+                    admin = admin.address)
+        scenario += c1
+        scenario.h3("Consumer Contract for Callback Calls.")
+        consumer = View_consumer(c1)
+        scenario += consumer
+
+        c1.mint(1).run(sender=alice, amount=sp.mutez(4000000))
+        c1.mint(1).run(sender=alice, amount=sp.mutez(4000000))
+        c1.mint(1).run(sender=alice, amount=sp.mutez(4000000))
+        scenario.p("Consumer virtual address: "
+                    + consumer.address.export())
+        scenario.h2("Balance-of.")
+        def arguments_for_balance_of(receiver, reqs):
+            return (sp.record(
+                callback = sp.contract(
+                    Balance_of.response_type(),
+                    receiver.address,
+                    entry_point = "receive_balances").open_some(),
+                requests = reqs))
+        c1.balance_of(arguments_for_balance_of(consumer, [
+            sp.record(owner = alice.address, token_id = 0),
+            sp.record(owner = alice.address, token_id = 1),
+            sp.record(owner = alice.address, token_id = 2)
+        ]))
+        scenario.verify(consumer.data.last_sum == 3)
 ## ## Standard “main”
 ##
 ## This specific main uses the relative new feature of non-default tests
 ## for the browser version.
 if "templates" not in __name__:
     sp.add_compilation_target("FA2_comp", FA2(config = environment_config(),
-                              metadata = sp.utils.metadata_of_url("https://example.com"),
-                              admin = sp.address("tz1M9CMEtsXm3QxA7FmMU2Qh7xzsuGXVbcDr")))
+                              metadata = sp.utils.metadata_of_url("ipfs://QmNe3gg9kUrzDBUQuN2TxUBzokxU9cQKFwgEY9bz8y7tX5"),
+                              admin = sp.address("tz1MTMXNd8fxbUuGHsYyBnFAPAFdA6GVyKVT")))
