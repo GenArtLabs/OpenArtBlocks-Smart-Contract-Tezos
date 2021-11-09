@@ -3,8 +3,6 @@ def run_tests_pause(config):
 
     admin, [alice, bob] = get_addresses()
 
-    config.max_editions = 10000
-
     scenario.h1("Tests pause")
     scenario.table_of_contents()
 

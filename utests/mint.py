@@ -5,7 +5,6 @@ def run_mint_test(config):
 
     admin, [alice, bob] = get_addresses()
 
-    config.max_editions = 10000
     c1 = FA2(config=config,
              metadata=sp.utils.metadata_of_url("https://example.com"),
              admin=admin.address)

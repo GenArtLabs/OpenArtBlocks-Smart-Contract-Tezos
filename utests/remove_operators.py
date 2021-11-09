@@ -5,8 +5,6 @@ def run_tests_remove_operator(config):
     op = sp.test_account("Operator#1")
     op2 = sp.test_account("Operator#2")
 
-    config.max_editions = 10000
-
     scenario.h1("Removing operator tests")
 
     scenario.table_of_contents()
