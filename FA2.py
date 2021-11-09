@@ -682,6 +682,10 @@ def tests_lock():
 def tests_transfer():
     run_tests_transfer(environment_config())
 
+@sp.add_test(name = "tzip12 tests multi-transfer", is_default=True)
+def tests_multi_transfer():
+    run_tests_multi_transfer(environment_config())
+
 @sp.add_test(name = "tzip12 tests operator", is_default=True)
 def tests_operator():
     run_tests_operator(environment_config())

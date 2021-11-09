@@ -1,13 +1,35 @@
-def run_tests_transfer(config):
+def run_tests_multi_transfer(config):
     scenario = sp.test_scenario()
 
     admin, [alice, bob] = get_addresses()
 
-    scenario.h1("Tests transfer")
+    scenario.h1("Tests multiple transfer")
     scenario.table_of_contents()
 
     #-----------------------------------------------------
     scenario.h2("Simple transfer")
+
+    possessors = [alice]*2
+    contract = create_new_contract(config, admin, scenario, possessors)
+
+    contract.transfer([
+        contract.batch_transfer.item(from_=alice.address,
+                               txs=[
+                                   sp.record(to_=bob.address,
+                                             amount=1,
+                                             token_id=0)
+                               ,
+                                   sp.record(to_=bob.address,
+                                             amount=1,
+                                             token_id=1)
+                               ])
+    ]).run(sender=alice)
+    possessors[0] = bob
+    possessors[1] = bob
+    ownership_test(scenario, contract, possessors)
+
+    #-----------------------------------------------------
+    scenario.h2("Sending 2 times the same token to itself")
 
     possessors = [alice]
     contract = create_new_contract(config, admin, scenario, possessors)
@@ -15,6 +37,77 @@ def run_tests_transfer(config):
     contract.transfer([
         contract.batch_transfer.item(from_=alice.address,
                                txs=[
+                                   sp.record(to_=alice.address,
+                                             amount=1,
+                                             token_id=0)
+                               ,
+                                   sp.record(to_=alice.address,
+                                             amount=1,
+                                             token_id=0)
+                               ])
+    ]).run(sender=alice)
+    ownership_test(scenario, contract, possessors)
+
+    #-----------------------------------------------------
+    scenario.h2("Sending 2 different tokens to 2 different addresses")
+
+    possessors = [alice]*2
+    contract = create_new_contract(config, admin, scenario, possessors)
+
+    contract.transfer([
+        contract.batch_transfer.item(from_=alice.address,
+                               txs=[
+                                   sp.record(to_=bob.address,
+                                             amount=1,
+                                             token_id=0)
+                               ,
+                                   sp.record(to_=admin.address,
+                                             amount=1,
+                                             token_id=1)
+                               ])
+    ]).run(sender=alice)
+    possessors[0] = bob
+    possessors[1] = admin
+    ownership_test(scenario, contract, possessors)
+
+    #-----------------------------------------------------
+    scenario.h2("Sending 1 token to someone else and 2 times the same token to itself")
+
+    possessors = [alice]*2
+    contract = create_new_contract(config, admin, scenario, possessors)
+
+    contract.transfer([
+        contract.batch_transfer.item(from_=alice.address,
+                               txs=[
+                                   sp.record(to_=bob.address,
+                                             amount=1,
+                                             token_id=1)
+                               ,
+                                   sp.record(to_=alice.address,
+                                             amount=1,
+                                             token_id=0)
+                               ,
+                                   sp.record(to_=alice.address,
+                                             amount=1,
+                                             token_id=0)
+                               ])
+    ]).run(sender=alice)
+    possessors[1] = bob
+    ownership_test(scenario, contract, possessors)
+
+    #-----------------------------------------------------
+    scenario.h2("Sending the same token to itself and (then) someone else")
+
+    possessors = [alice]
+    contract = create_new_contract(config, admin, scenario, possessors)
+
+    contract.transfer([
+        contract.batch_transfer.item(from_=alice.address,
+                               txs=[
+                                   sp.record(to_=alice.address,
+                                             amount=1,
+                                             token_id=0)
+                               ,
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=0)
@@ -24,7 +117,7 @@ def run_tests_transfer(config):
     ownership_test(scenario, contract, possessors)
 
     #-----------------------------------------------------
-    scenario.h2("Self-transfer")
+    scenario.h2("Sending the same token to someone else and (then) itself")
 
     possessors = [alice]
     contract = create_new_contract(config, admin, scenario, possessors)
@@ -32,15 +125,21 @@ def run_tests_transfer(config):
     contract.transfer([
         contract.batch_transfer.item(from_=alice.address,
                                txs=[
+                                   sp.record(to_=bob.address,
+                                             amount=1,
+                                             token_id=0)
+                               ,
                                    sp.record(to_=alice.address,
                                              amount=1,
                                              token_id=0)
                                ])
-    ]).run(sender=alice)
+    ]).run(sender=alice, valid=False)
+
+    scenario.p("Transaction has been cancelled")
     ownership_test(scenario, contract, possessors)
 
     #-----------------------------------------------------
-    scenario.h2("Transfering a token in ammount 0")
+    scenario.h2("Sending one existing token and 1 non-existing token")
 
     possessors = [alice]
     contract = create_new_contract(config, admin, scenario, possessors)
@@ -49,30 +148,20 @@ def run_tests_transfer(config):
         contract.batch_transfer.item(from_=alice.address,
                                txs=[
                                    sp.record(to_=bob.address,
-                                             amount=0,
+                                             amount=1,
                                              token_id=0)
-                               ])
-    ]).run(sender=alice)
-    ownership_test(scenario, contract, possessors)
-
-    #-----------------------------------------------------
-    scenario.h2("Transfering another's token in ammount 0")
-
-    possessors = [bob]
-    contract = create_new_contract(config, admin, scenario, possessors)
-
-    contract.transfer([
-        contract.batch_transfer.item(from_=alice.address,
-                               txs=[
+                               ,
                                    sp.record(to_=bob.address,
-                                             amount=0,
-                                             token_id=0)
+                                             amount=1,
+                                             token_id=1000)
                                ])
-    ]).run(sender=alice)
+    ]).run(sender=alice, valid=False)
+
+    scenario.p("Transaction has been cancelled")
     ownership_test(scenario, contract, possessors)
 
     #-----------------------------------------------------
-    scenario.h2("Trying to send a non-existing token in 0 amount")
+    scenario.h2("Sending 2 non-existing tokens to someone")
 
     contract = create_new_contract(config, admin, scenario, [])
 
@@ -80,48 +169,19 @@ def run_tests_transfer(config):
         contract.batch_transfer.item(from_=alice.address,
                                txs=[
                                    sp.record(to_=bob.address,
-                                             amount=0,
+                                             amount=1,
                                              token_id=1000)
-                               ])
-    ]).run(sender=alice, valid=False)
-
-    #-----------------------------------------------------
-    scenario.h2("Sending a token with amount > 1")
-
-    possessors = [alice]
-    contract = create_new_contract(config, admin, scenario, possessors)
-
-    scenario.h4("Alice tries to send twice its token (amount) to someone")
-    contract.transfer([
-        contract.batch_transfer.item(from_=alice.address,
-                               txs=[
+                               ,
                                    sp.record(to_=bob.address,
-                                             amount=2,
-                                             token_id=0)
+                                             amount=1,
+                                             token_id=1001)
                                ])
     ]).run(sender=alice, valid=False)
-    ownership_test(scenario, contract, possessors)
 
     #-----------------------------------------------------
-    scenario.h2("Sending a token with amount > 1 to itself")
+    scenario.h2("Sending 2 times the same token to someone")
 
     possessors = [alice]
-    contract = create_new_contract(config, admin, scenario, possessors)
-
-    contract.transfer([
-        contract.batch_transfer.item(from_=alice.address,
-                               txs=[
-                                   sp.record(to_=alice.address,
-                                             amount=2,
-                                             token_id=0)
-                               ])
-    ]).run(sender=alice, valid=False)
-    ownership_test(scenario, contract, possessors)
-
-    #-----------------------------------------------------
-    scenario.h2("Sending not-owned token to someone")
-
-    possessors = [bob]
     contract = create_new_contract(config, admin, scenario, possessors)
 
     contract.transfer([
@@ -130,136 +190,53 @@ def run_tests_transfer(config):
                                    sp.record(to_=bob.address,
                                              amount=1,
                                              token_id=0)
+                               ,
+                                   sp.record(to_=bob.address,
+                                             amount=1,
+                                             token_id=0)
                                ])
     ]).run(sender=alice, valid=False)
+
+    scenario.p("Transaction has been cancelled")
     ownership_test(scenario, contract, possessors)
 
     #-----------------------------------------------------
-    scenario.h2("Stealing someone's token")
+    scenario.h2("Sending the same token to 2 different addresses")
 
-    possessors = [bob]
+    possessors = [alice]
     contract = create_new_contract(config, admin, scenario, possessors)
+
+    contract.transfer([
+        contract.batch_transfer.item(from_=alice.address,
+                               txs=[
+                                   sp.record(to_=bob.address,
+                                             amount=1,
+                                             token_id=0)
+                               ,
+                                   sp.record(to_=admin.address,
+                                             amount=1,
+                                             token_id=0)
+                               ])
+    ]).run(sender=alice, valid=False)
+
+    scenario.p("Transaction has been cancelled")
+    ownership_test(scenario, contract, possessors)
+
+    #-----------------------------------------------------
+    scenario.h2("Cannot force a transaction between two addresses")
+
+    contract = create_new_contract(config, admin, scenario, [bob]*2)
 
     contract.transfer([
         contract.batch_transfer.item(from_=bob.address,
                                txs=[
-                                   sp.record(to_=alice.address,
+                                   sp.record(to_=admin.address,
                                              amount=1,
                                              token_id=0)
-                               ])
-    ]).run(sender=alice, valid=False)
-    ownership_test(scenario, contract, possessors)
-
-    #-----------------------------------------------------
-    scenario.h2("Transfering a non-existing token")
-
-    contract = create_new_contract(config, admin, scenario, [])
-
-    contract.transfer([
-        contract.batch_transfer.item(from_=alice.address,
-                               txs=[
-                                   sp.record(to_=bob.address,
-                                             amount=1,
-                                             token_id=1000)
-                               ])
-    ]).run(sender=alice, valid=False)
-
-    #-----------------------------------------------------
-    scenario.h2("Self-transfering a non-existing token")
-
-    contract = create_new_contract(config, admin, scenario, [])
-
-    contract.transfer([
-        contract.batch_transfer.item(from_=alice.address,
-                               txs=[
+                               ,
                                    sp.record(to_=alice.address,
-                                             amount=1,
-                                             token_id=1000)
-                               ])
-    ]).run(sender=alice, valid=False)
-
-    #-----------------------------------------------------
-    scenario.h2("Stealing a non-existing token")
-
-    contract = create_new_contract(config, admin, scenario, [])
-
-    contract.transfer([
-        contract.batch_transfer.item(from_=bob.address,
-                               txs=[
-                                   sp.record(to_=alice.address,
-                                             amount=1,
-                                             token_id=1000)
-                               ])
-    ]).run(sender=alice, valid=False)
-
-    #-----------------------------------------------------
-    scenario.h2("Admin cannot steal token")
-
-    contract = create_new_contract(config, admin, scenario, [alice])
-
-    contract.transfer([
-        contract.batch_transfer.item(from_=alice.address,
-                               txs=[
-                                   sp.record(to_=admin.address,
                                              amount=1,
                                              token_id=1)
                                ])
-    ]).run(sender=admin, valid=False)
-    ownership_test(scenario, contract, [alice])
-
-    #-----------------------------------------------------
-    scenario.h2("Admin cannot force transfers")
-
-    contract = create_new_contract(config, admin, scenario, [alice])
-
-    contract.transfer([
-        contract.batch_transfer.item(from_=alice.address,
-                               txs=[
-                                   sp.record(to_=bob.address,
-                                             amount=1,
-                                             token_id=1)
-                               ])
-    ]).run(sender=admin, valid=False)
-    ownership_test(scenario, contract, [alice])
-
-    #-----------------------------------------------------
-    scenario.h2("Admin cannot transfer a non-existing token")
-
-    contract = create_new_contract(config, admin, scenario, [])
-
-    contract.transfer([
-        contract.batch_transfer.item(from_=admin.address,
-                               txs=[
-                                   sp.record(to_=bob.address,
-                                             amount=1,
-                                             token_id=1000)
-                               ])
     ]).run(sender=alice, valid=False)
 
-    #-----------------------------------------------------
-    scenario.h2("Admin cannot transfer a non-existing token")
-
-    contract = create_new_contract(config, admin, scenario, [])
-
-    contract.transfer([
-        contract.batch_transfer.item(from_=admin.address,
-                               txs=[
-                                   sp.record(to_=admin.address,
-                                             amount=1,
-                                             token_id=1000)
-                               ])
-    ]).run(sender=alice, valid=False)
-
-    #-----------------------------------------------------
-    scenario.h2("Admin cannot steal a non-existing token")
-
-    contract = create_new_contract(config, admin, scenario, [])
-
-    contract.transfer([
-        contract.batch_transfer.item(from_=alice.address,
-                               txs=[
-                                   sp.record(to_=admin.address,
-                                             amount=1,
-                                             token_id=1000)
-                               ])
-    ]).run(sender=alice, valid=False)
